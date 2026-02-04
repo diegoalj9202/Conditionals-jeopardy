@@ -1,845 +1,1918 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conditional Cluedo Jeopardy</title>
-    <style>
-        :root {
-            --primary-blue: #0033cc;
-            --dark-blue: #001a66;
-            --deep-bg: #050510;
-            --text-gold: #ffdb4d;
-            --white: #ffffff;
-            --grey-disabled: #3a3a52;
-            --correct-green: #2ecc71;
-            --wrong-red: #e74c3c;
-            --partial-orange: #f39c12;
-            --font-main: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            --card-radius: 12px;
-            --tile-radius: 16px;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Conditional Cluedo Jeopardy</title>
+  <style>
+    /* ==========================================================
+       CONDITIONAL CLUEDO JEOPARDY (Single-file, offline)
+       - No external assets/frameworks
+       - Edit questions in the GAME_CONTENT object in <script> below
+       ========================================================== */
 
-        * { box-sizing: border-box; }
+    :root{
+      --bg0:#070A13;
+      --bg1:#0B1022;
+      --card:#0F1733;
+      --card2:#101C3F;
+      --tile:#13224D;
+      --tileHover:#183064;
+      --accent:#7C5CFF;
+      --accent2:#22D3EE;
+      --good:#32D583;
+      --warn:#F59E0B;
+      --bad:#FB7185;
+      --text:#EAF0FF;
+      --muted:#A9B4D6;
+      --border:rgba(255,255,255,.12);
+      --shadow: 0 18px 60px rgba(0,0,0,.35);
+      --radius:16px;
+      --radius2:20px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+    }
 
-        body {
-            margin: 0;
-            padding: 0;
-            background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
-            color: var(--white);
-            font-family: var(--font-main);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; /* Prevent body scroll */
-        }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 20% 10%, rgba(124,92,255,.22), transparent 55%),
+        radial-gradient(900px 550px at 85% 25%, rgba(34,211,238,.18), transparent 50%),
+        radial-gradient(900px 650px at 60% 105%, rgba(50,213,131,.10), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
 
-        /* --- Animations --- */
-        @keyframes flashRed {
-            0% { background-color: rgba(231, 76, 60, 0); }
-            25% { background-color: rgba(231, 76, 60, 0.4); }
-            50% { background-color: rgba(231, 76, 60, 0); }
-            75% { background-color: rgba(231, 76, 60, 0.4); }
-            100% { background-color: rgba(231, 76, 60, 0); }
-        }
+    /* Header */
+    header{
+      position:sticky;
+      top:0;
+      z-index:20;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(7,10,19,.82), rgba(7,10,19,.45));
+      border-bottom:1px solid var(--border);
+    }
+    .header-inner{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 16px;
+      max-width:1300px;
+      margin:0 auto;
+    }
+    .title{
+      display:flex;align-items:center;gap:12px;min-width:240px;
+    }
+    .badge{
+      width:40px;height:40px;border-radius:12px;
+      background: linear-gradient(135deg, rgba(124,92,255,.9), rgba(34,211,238,.75));
+      display:grid;place-items:center;
+      box-shadow: 0 12px 35px rgba(124,92,255,.25);
+      border:1px solid rgba(255,255,255,.18);
+      flex:0 0 auto;
+    }
+    .badge svg{width:22px;height:22px;opacity:.95}
+    .title h1{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.2px;
+      line-height:1.1;
+    }
+    .title p{
+      margin:3px 0 0;
+      color:var(--muted);
+      font-size:12.5px;
+      line-height:1.25;
+    }
+    .controls{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .btn{
+      appearance:none;
+      border:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:650;
+      font-size:13px;
+      cursor:pointer;
+      transition: transform .08s ease, background .15s ease, border-color .15s ease;
+      box-shadow: 0 10px 30px rgba(0,0,0,.2);
+    }
+    .btn:hover{background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.03)); border-color:rgba(255,255,255,.2)}
+    .btn:active{transform: translateY(1px)}
+    .btn.primary{
+      border-color: rgba(124,92,255,.35);
+      background: linear-gradient(180deg, rgba(124,92,255,.26), rgba(124,92,255,.12));
+    }
+    .btn.danger{
+      border-color: rgba(251,113,133,.35);
+      background: linear-gradient(180deg, rgba(251,113,133,.20), rgba(251,113,133,.10));
+    }
+    .btn.ghost{
+      background: transparent;
+      box-shadow:none;
+    }
+    .btn.small{padding:7px 10px; font-size:12.5px; border-radius:10px}
 
-        @keyframes softPulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.7); background-color: rgba(243, 156, 18, 0.2); }
-            50% { transform: scale(1.02); box-shadow: 0 0 20px 10px rgba(243, 156, 18, 0); background-color: rgba(243, 156, 18, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(243, 156, 18, 0); }
-        }
+    /* Layout */
+    .app{
+      max-width:1300px;
+      margin:0 auto;
+      padding:16px;
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:16px;
+    }
 
-        @keyframes modalShake {
-            0%, 100% { transform: translateX(0); border-color: var(--text-gold); }
-            20% { transform: translateX(-10px); border-color: var(--wrong-red); }
-            40% { transform: translateX(10px); border-color: var(--wrong-red); }
-            60% { transform: translateX(-10px); border-color: var(--wrong-red); }
-            80% { transform: translateX(10px); border-color: var(--wrong-red); }
-        }
+    @media (max-width: 980px){
+      .app{grid-template-columns:1fr}
+    }
 
-        .anim-wrong { animation: flashRed 0.8s ease-in-out; }
-        .anim-partial { animation: softPulse 0.8s ease-in-out; }
-        .anim-shake { animation: modalShake 0.5s ease-in-out; }
+    /* Settings panel (collapsible) */
+    .panel{
+      border:1px solid var(--border);
+      border-radius:var(--radius2);
+      background: linear-gradient(180deg, rgba(16,28,63,.75), rgba(15,23,51,.65));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .panel-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:14px 14px 12px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .panel-head h2{
+      margin:0;
+      font-size:14px;
+      letter-spacing:.2px;
+    }
+    .panel-head .hint{
+      margin:0;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .panel-body{
+      padding:14px;
+      display:none;
+      animation: pop .18s ease-out;
+    }
+    .panel.open .panel-body{display:block}
+    @keyframes pop{from{opacity:.0; transform: translateY(-6px)} to{opacity:1; transform:none}}
 
-        /* --- UI Container Structure --- */
-        #top-ui-container {
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            z-index: 20;
-            flex-shrink: 0;
-        }
+    .section{
+      padding:12px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      margin-bottom:12px;
+    }
+    .section:last-child{margin-bottom:0}
+    .section-title{
+      display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px
+    }
+    .section-title h3{margin:0;font-size:13px}
+    .section-title span{color:var(--muted);font-size:12px}
 
-        /* --- Header --- */
-        header {
-            padding: 8px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    .grid2{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+    .grid3{display:grid; grid-template-columns: repeat(3, 1fr); gap:10px}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    label{
+      display:block;
+      color:var(--muted);
+      font-size:12px;
+      margin-bottom:6px;
+    }
+    input[type="text"], input[type="number"], select{
+      width:100%;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(8,12,28,.55);
+      color:var(--text);
+      outline:none;
+      font-size:13.5px;
+    }
+    input[type="number"]{font-family:var(--mono)}
+    input[type="text"]:focus, input[type="number"]:focus, select:focus{
+      border-color: rgba(124,92,255,.5);
+      box-shadow: 0 0 0 3px rgba(124,92,255,.15);
+    }
+    .mini{
+      font-size:12px; color:var(--muted); margin-top:8px; line-height:1.3
+    }
+    .divider{height:1px;background:rgba(255,255,255,.08);margin:12px 0}
 
-        h1 { 
-            margin: 0; 
-            color: var(--text-gold); 
-            font-size: 1.4rem; 
-            text-transform: uppercase; 
-            letter-spacing: 2px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
+    /* Scoreboard */
+    .scoreboard{
+      border:1px solid var(--border);
+      border-radius:var(--radius2);
+      background: linear-gradient(180deg, rgba(16,28,63,.75), rgba(15,23,51,.65));
+      box-shadow: var(--shadow);
+      padding:12px;
+    }
+    .scoreboard-head{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:4px 2px 10px;
+    }
+    .scoreboard-head h2{margin:0;font-size:14px}
+    .team-list{display:grid; gap:10px}
+    .team-card{
+      border:1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(19,34,77,.55), rgba(15,23,51,.35));
+      border-radius:16px;
+      padding:10px;
+      display:grid;
+      grid-template-columns: 1fr 110px;
+      gap:10px;
+      align-items:center;
+      position:relative;
+      overflow:hidden;
+    }
+    .team-card::before{
+      content:"";
+      position:absolute; inset:-40px -60px auto auto;
+      width:140px;height:140px;border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, rgba(124,92,255,.18), transparent 60%);
+      pointer-events:none;
+      filter: blur(0px);
+    }
+    .team-name{
+      display:flex; flex-direction:column; gap:6px; z-index:1;
+    }
+    .team-name input{padding:9px 10px;border-radius:12px}
+    .score-box input{
+      text-align:right;
+      font-weight:800;
+      letter-spacing:.2px;
+      padding:9px 10px;
+      border-radius:12px;
+      font-size:14px;
+    }
+    .team-meta{
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      margin-top:2px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .pill{
+      padding:5px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .team-active{
+      outline:2px solid rgba(34,211,238,.35);
+      box-shadow: 0 0 0 3px rgba(34,211,238,.08), var(--shadow);
+    }
 
-        .control-group { display: flex; gap: 8px; }
+    /* Board */
+    .board-wrap{
+      border:1px solid var(--border);
+      border-radius:var(--radius2);
+      background: linear-gradient(180deg, rgba(16,28,63,.55), rgba(15,23,51,.35));
+      box-shadow: var(--shadow);
+      padding:12px;
+      overflow:hidden;
+    }
+    .board-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:6px 4px 12px;
+    }
+    .board-head h2{margin:0;font-size:14px}
+    .board-head .sub{
+      color:var(--muted);
+      font-size:12px;
+    }
 
-        button {
-            cursor: pointer;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 50px;
-            font-weight: bold;
-            transition: all 0.2s;
-            font-size: 0.8rem;
-            box-shadow: 0 3px 5px rgba(0,0,0,0.2);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+    .jeopardy{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap:10px;
+    }
+    .cat{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      overflow:hidden;
+      background: rgba(0,0,0,.12);
+    }
+    .cat-title{
+      padding:14px 12px;
+      text-align:center;
+      font-weight:900;
+      font-size:13px;
+      letter-spacing:.8px;
+      text-transform:uppercase;
+      background: linear-gradient(180deg, rgba(124,92,255,.20), rgba(124,92,255,.10));
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .tiles{
+      display:grid;
+      grid-template-rows: repeat(5, 1fr);
+      gap:8px;
+      padding:10px;
+    }
+    .tile{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:14px;
+      background: linear-gradient(180deg, rgba(19,34,77,.85), rgba(19,34,77,.55));
+      min-height:76px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      transition: transform .08s ease, filter .12s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+      outline:none;
+    }
+    .tile:hover{
+      background: linear-gradient(180deg, rgba(24,48,100,.92), rgba(19,34,77,.62));
+      border-color: rgba(255,255,255,.18);
+      transform: translateY(-1px);
+    }
+    .tile:active{transform: translateY(0px) scale(.99)}
+    .tile .points{
+      font-family:var(--mono);
+      font-weight:950;
+      font-size:24px;
+      letter-spacing:.5px;
+      text-shadow: 0 10px 35px rgba(0,0,0,.35);
+      color: #F7FAFF;
+    }
+    .tile.used{
+      cursor:not-allowed;
+      filter: grayscale(.25) brightness(.75);
+      opacity:.72;
+      background: linear-gradient(180deg, rgba(19,34,77,.40), rgba(19,34,77,.22));
+    }
+    .tile.used:hover{transform:none}
+    .tile.used::after{
+      content:"USED";
+      position:absolute;
+      inset:auto 10px 10px auto;
+      font-size:11px;
+      letter-spacing:.8px;
+      color:rgba(255,255,255,.55);
+      background: rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.12);
+      padding:4px 8px;
+      border-radius:999px;
+      font-weight:800;
+    }
 
-        button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+    @media (max-width: 680px){
+      .jeopardy{grid-template-columns:1fr}
+      .tile{min-height:64px}
+      .tile .points{font-size:22px}
+    }
 
-        .btn-primary { background: linear-gradient(180deg, var(--text-gold) 0%, #e6b800 100%); color: var(--dark-blue); }
-        .btn-primary:hover { filter: brightness(1.1); }
-        
-        .btn-danger { background: linear-gradient(180deg, #ff6b6b 0%, var(--wrong-red) 100%); color: white; }
-        .btn-secondary { background: linear-gradient(180deg, #8e9eab 0%, #6c757d 100%); color: white; }
+    /* Modal */
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.58);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      z-index:50;
+    }
+    .modal-backdrop.open{display:flex}
+    .modal{
+      width:min(960px, 100%);
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(16,28,63,.92), rgba(10,14,34,.92));
+      box-shadow: 0 25px 90px rgba(0,0,0,.55);
+      overflow:hidden;
+      transform: translateY(6px);
+      animation: modalIn .18s ease-out forwards;
+    }
+    @keyframes modalIn{to{transform:none}}
+    .modal-head{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .modal-head .meta{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .modal-head .meta h3{
+      margin:0;
+      font-size:14px;
+      letter-spacing:.4px;
+      text-transform:uppercase;
+      color:rgba(255,255,255,.88);
+    }
+    .modal-head .meta p{
+      margin:0;
+      font-family:var(--mono);
+      color:rgba(255,255,255,.78);
+      font-size:13px;
+    }
+    .modal-body{
+      padding:16px;
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:14px;
+    }
+    @media (max-width: 860px){
+      .modal-body{grid-template-columns:1fr}
+    }
+    .clue-card{
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(19,34,77,.72), rgba(12,18,45,.55));
+      padding:16px;
+      position:relative;
+      overflow:hidden;
+    }
+    .clue-card::before{
+      content:"";
+      position:absolute; inset:-60px auto auto -60px;
+      width:200px;height:200px;border-radius:50%;
+      background: radial-gradient(circle at 35% 35%, rgba(34,211,238,.16), transparent 60%);
+      pointer-events:none;
+    }
+    .clue{
+      margin:0;
+      font-size:22px;
+      line-height:1.25;
+      letter-spacing:.2px;
+      font-weight:850;
+      text-shadow: 0 10px 35px rgba(0,0,0,.22);
+    }
+    .clue-sub{
+      margin:10px 0 0;
+      color:var(--muted);
+      font-size:12.5px;
+      line-height:1.3;
+    }
 
-        /* --- Settings Panel --- */
-        #settings-panel {
-            background: #2a2a35;
-            padding: 20px;
-            display: none; 
-            border-bottom: 2px solid #444;
-            color: #eee;
-            position: absolute;
-            width: 100%;
-            z-index: 30;
-        }
-        #settings-panel.open { display: block; }
-        
-        .setting-row { margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
-        input[type="text"], input[type="number"] {
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid #555;
-            background: #1a1a25;
-            color: white;
-            font-family: inherit;
-        }
+    .answer{
+      margin-top:14px;
+      display:none;
+      border-top:1px dashed rgba(255,255,255,.18);
+      padding-top:12px;
+      animation: fadeIn .16s ease-out;
+    }
+    .answer.open{display:block}
+    @keyframes fadeIn{from{opacity:0; transform: translateY(-3px)} to{opacity:1; transform:none}}
 
-        /* --- Scoreboard --- */
-        #scoreboard {
-            display: flex;
-            justify-content: center;
-            padding: 5px 15px 10px 15px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
+    .kv{
+      display:grid;
+      grid-template-columns: 130px 1fr;
+      gap:8px 10px;
+      align-items:start;
+      margin-top:10px;
+      font-size:13.5px;
+    }
+    .kv .k{color:var(--muted); font-family:var(--mono); font-size:12.5px}
+    .kv .v{font-weight:750}
 
-        .team-card {
-            background: linear-gradient(145deg, #2a2a4a, #1a1a2e);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            padding: 8px 12px;
-            border-radius: var(--card-radius);
-            min-width: 110px;
-            text-align: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
+    .scoring{
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .scoring h4{margin:0; font-size:13px}
+    .scoring .mini{margin:0}
+    .scoring .row{gap:10px}
+    .scoring .btnrow{display:flex; gap:10px; flex-wrap:wrap}
+    .btn.good{border-color: rgba(50,213,131,.35); background: linear-gradient(180deg, rgba(50,213,131,.18), rgba(50,213,131,.08))}
+    .btn.warn{border-color: rgba(245,158,11,.35); background: linear-gradient(180deg, rgba(245,158,11,.18), rgba(245,158,11,.08))}
+    .btn.bad{border-color: rgba(251,113,133,.35); background: linear-gradient(180deg, rgba(251,113,133,.18), rgba(251,113,133,.08))}
+    .status{
+      display:none;
+      padding:10px 10px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.22);
+      color:rgba(255,255,255,.86);
+      font-size:13px;
+      line-height:1.25;
+    }
+    .status.open{display:block}
 
-        .team-card.active-turn { 
-            background: linear-gradient(145deg, #0044cc, #002a80);
-            box-shadow: 0 0 15px rgba(0, 100, 255, 0.5); 
-            border-color: var(--text-gold);
-            transform: translateY(-2px);
-        }
-        
-        .team-name { font-weight: bold; color: var(--text-gold); margin-bottom: 2px; display: block; font-size: 0.95rem; text-shadow: 0 2px 2px rgba(0,0,0,0.5); }
-        .team-score { font-size: 1.4rem; font-weight: bold; display: block; color: white; margin-bottom: 4px; }
-        
-        .score-adjust { 
-            font-size: 0.7rem; 
-            background: rgba(255,255,255,0.1); 
-            border: 1px solid rgba(255,255,255,0.2); 
-            color: #ccc; cursor: pointer; 
-            padding: 3px 6px;
-            border-radius: 4px;
-            margin: 0 2px;
-            box-shadow: none;
-        }
-        .score-adjust:hover { background: rgba(255,255,255,0.2); color: white; }
+    .steal{
+      display:none;
+      padding:12px;
+      border-radius:16px;
+      border:1px dashed rgba(255,255,255,.18);
+      background: rgba(0,0,0,.18);
+    }
+    .steal.open{display:block}
+    .steal h5{margin:0 0 8px; font-size:12.5px; color:rgba(255,255,255,.86); letter-spacing:.2px}
+    .checkbox{
+      display:flex; align-items:center; gap:8px; margin-top:4px; color:var(--muted); font-size:12.5px;
+      user-select:none;
+    }
+    .checkbox input{width:16px;height:16px}
 
-        /* --- Game Board Area --- */
-        #game-board-container {
-            flex: 1; /* Takes all remaining height */
-            padding: 10px 20px 20px 20px;
-            display: flex;
-            justify-content: center;
-            align-items: stretch;
-            overflow: hidden; /* Prevent internal scroll if possible */
-            height: 0; /* Flexbox trick to force calculation */
-        }
+    /* Timer */
+    .timer{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 10px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(8,12,28,.45);
+      font-family:var(--mono);
+    }
+    .timer .tleft{font-weight:900; font-size:16px; letter-spacing:.3px}
+    .timer .bar{
+      flex:1;
+      height:8px;
+      border-radius:999px;
+      background: rgba(255,255,255,.10);
+      overflow:hidden;
+    }
+    .timer .bar > i{
+      display:block;
+      height:100%;
+      width:100%;
+      background: linear-gradient(90deg, rgba(34,211,238,.9), rgba(124,92,255,.9));
+      transform-origin:left center;
+      transform: scaleX(1);
+    }
 
-        #game-board {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: auto repeat(5, 1fr); /* 1 Auto header row, 5 Equal content rows */
-            gap: 12px;
-            width: 100%;
-            max-width: 1400px;
-            height: 100%; /* Fill the container */
-        }
+    /* Global overlay for "wrong" flashes */
+    .wrong-overlay{
+      position:fixed; inset:0;
+      pointer-events:none;
+      z-index:70;
+      display:none;
+      background: radial-gradient(900px 600px at 50% 50%, rgba(251,113,133,.45), rgba(0,0,0,.0) 55%),
+                  linear-gradient(90deg, rgba(251,113,133,.25), rgba(0,0,0,.0), rgba(251,113,133,.25));
+      mix-blend-mode: screen;
+      opacity:0;
+    }
+    .wrong-overlay.play{
+      display:block;
+      animation: wrongFlash .55s ease-in-out 3;
+    }
+    @keyframes wrongFlash{
+      0%{opacity:0}
+      25%{opacity:.9}
+      50%{opacity:.0}
+      75%{opacity:.9}
+      100%{opacity:0}
+    }
 
-        .cat-header {
-            background: linear-gradient(180deg, #0044cc 0%, #002a80 100%);
-            color: var(--white);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            font-weight: 800;
-            font-size: clamp(0.7rem, 2vh, 1.1rem); /* Dynamic Font */
-            padding: 5px;
-            border-radius: var(--tile-radius);
-            text-transform: uppercase;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-            border-bottom: 4px solid #001a4d;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-            letter-spacing: 1px;
-            height: 100%; /* Fill cell */
-        }
+    /* Confetti */
+    .confetti-layer{
+      position:fixed; inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:80;
+    }
+    .confetti{
+      position:absolute;
+      width:10px;height:14px;
+      border-radius:3px;
+      opacity:.95;
+      transform: translateY(-20px) rotate(0deg);
+      animation: fall 1.35s linear forwards;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    @keyframes fall{
+      to{
+        transform: translateY(calc(100vh + 40px)) rotate(720deg);
+        opacity:0.85;
+      }
+    }
 
-        .clue-tile {
-            background: linear-gradient(145deg, #0055ff, #002288);
-            color: var(--text-gold);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: clamp(1.5rem, 5vh, 3rem); /* Dynamic Font */
-            font-weight: 900;
-            cursor: pointer;
-            border-radius: var(--tile-radius);
-            transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
-            text-shadow: 2px 2px 0px rgba(0,0,0,0.3);
-            box-shadow: 
-                0 4px 0 #001a66, 
-                0 6px 6px rgba(0,0,0,0.3);
-            height: 100%; /* Fill cell */
-            position: relative;
-        }
+    /* Subtle pulse for partial */
+    .pulse{
+      animation: pulse .55s ease-out 1;
+    }
+    @keyframes pulse{
+      0%{transform:scale(1); filter:brightness(1)}
+      35%{transform:scale(1.01); filter:brightness(1.12)}
+      100%{transform:scale(1); filter:brightness(1)}
+    }
 
-        .clue-tile:hover { 
-            transform: translateY(-2px); 
-            filter: brightness(1.1);
-            box-shadow: 
-                0 6px 0 #001a66, 
-                0 10px 15px rgba(0,0,0,0.4);
-        }
-
-        .clue-tile:active {
-            transform: translateY(2px);
-            box-shadow: 
-                0 2px 0 #001a66, 
-                0 3px 3px rgba(0,0,0,0.3);
-        }
-        
-        .clue-tile.disabled {
-            background: #2a2a35;
-            color: transparent;
-            cursor: default;
-            transform: translateY(4px);
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
-            border: 2px solid #333;
-        }
-
-        /* --- Modal --- */
-        #clue-modal {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(5px);
-            z-index: 100;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        #clue-modal.visible { display: flex; animation: fadeModal 0.3s ease-out; }
-        @keyframes fadeModal { from { opacity: 0; } to { opacity: 1; } }
-
-        .modal-content {
-            background: linear-gradient(135deg, #0033cc 0%, #001a66 100%);
-            border: 4px solid var(--text-gold);
-            width: 100%;
-            max-width: 850px;
-            padding: 40px;
-            text-align: center;
-            border-radius: 30px;
-            box-shadow: 
-                0 0 0 5px rgba(0, 0, 0, 0.2),
-                0 20px 50px rgba(0,0,0,0.7);
-            position: relative;
-            color: white;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-header { font-size: 1.1rem; color: #aaccee; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
-        
-        .clue-text {
-            font-size: 2.2rem;
-            margin-bottom: 40px;
-            line-height: 1.3;
-            color: white;
-            font-weight: 600;
-            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
-        }
-
-        .answer-box {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 25px;
-            margin: 25px 0;
-            border-left: 6px solid var(--text-gold);
-            border-radius: 0 15px 15px 0;
-            display: none;
-            text-align: left;
-        }
-        
-        .answer-box.visible { display: block; animation: slideUp 0.4s ease-out; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-        .answer-detail { margin: 8px 0; font-size: 1.1rem; display: flex; }
-        .answer-label { color: var(--text-gold); font-weight: bold; min-width: 140px; display: inline-block; }
-
-        .modal-controls {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 30px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding-top: 25px;
-        }
-
-        .score-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(255,255,255,0.05);
-            padding: 10px 15px;
-            border-radius: 15px;
-        }
-
-        select { 
-            padding: 10px; 
-            font-size: 1rem; 
-            border-radius: 8px; 
-            border: 1px solid #555;
-            background: #111;
-            color: white;
-        }
-        
-        .btn-correct { background: linear-gradient(180deg, #2ecc71 0%, #27ae60 100%); color: white; }
-        .btn-partial { background: linear-gradient(180deg, #f39c12 0%, #d35400 100%); color: white; }
-        .btn-incorrect { background: linear-gradient(180deg, #e74c3c 0%, #c0392b 100%); color: white; }
-        
-        .btn-reveal { 
-            background: linear-gradient(180deg, #ffe066 0%, #ffcc00 100%); 
-            color: #443300; 
-            font-size: 1.2rem; 
-            padding: 12px 30px; 
-            box-shadow: 0 5px 15px rgba(255, 204, 0, 0.3);
-        }
-
-        /* Timer */
-        .timer-display {
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: var(--wrong-red);
-            margin-bottom: 10px;
-            visibility: hidden;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-        .timer-display.active { visibility: visible; }
-
-        /* Canvas for Confetti */
-        #confetti-canvas {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 999;
-        }
-
-        /* Responsive Tweaks */
-        @media (max-width: 768px) {
-            .clue-text { font-size: 1.4rem; }
-            #game-board { gap: 8px; }
-            .clue-tile { font-size: 1.5rem; border-radius: 12px; }
-            .cat-header { font-size: 0.8rem; padding: 5px; border-radius: 10px; }
-            .team-card { min-width: 80px; padding: 5px; }
-            header { flex-direction: column; gap: 5px; }
-            h1 { font-size: 1.2rem; }
-            .modal-content { padding: 20px; width: 95%; }
-        }
-    </style>
+    /* Tiny footer note */
+    .foot{
+      max-width:1300px;
+      margin:0 auto;
+      padding:0 16px 18px;
+      color:rgba(255,255,255,.55);
+      font-size:12px;
+      text-align:center;
+    }
+    kbd{
+      font-family:var(--mono);
+      font-size:11px;
+      padding:2px 6px;
+      border:1px solid rgba(255,255,255,.16);
+      border-bottom-width:2px;
+      border-radius:8px;
+      background: rgba(0,0,0,.22);
+      color:rgba(255,255,255,.75);
+    }
+  </style>
 </head>
 <body>
-
-    <!-- Confetti Canvas -->
-    <canvas id="confetti-canvas"></canvas>
-
-    <!-- Fixed Top Section -->
-    <div id="top-ui-container">
-        <!-- Header -->
-        <header>
-            <h1>Conditional Cluedo</h1>
-            <div class="control-group">
-                <button class="btn-secondary" onclick="game.toggleTimer()" id="timer-btn">Timer: OFF</button>
-                <button class="btn-secondary" onclick="game.undo()">Undo</button>
-                <button class="btn-secondary" onclick="game.toggleSettings()">Settings</button>
-            </div>
-        </header>
-
-        <!-- Settings Panel (Overlays when open) -->
-        <div id="settings-panel">
-            <h3>Game Settings</h3>
-            <div class="setting-row">
-                <label>Number of Teams:</label>
-                <input type="number" id="team-count" min="2" max="6" value="3" style="width: 60px;">
-                <button class="btn-primary" onclick="game.updateTeamCount()">Update</button>
-            </div>
-            <div id="team-names-config" class="setting-row">
-                <!-- Team name inputs injected here -->
-            </div>
-            <div class="setting-row">
-                <button class="btn-danger" onclick="if(confirm('Reset entire game?')) game.init()">Reset Game</button>
-            </div>
-        </div>
-
-        <!-- Scoreboard -->
-        <div id="scoreboard">
-            <!-- Team cards injected here -->
-        </div>
+<header>
+  <div class="header-inner">
+    <div class="title">
+      <div class="badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 2l7 4v6c0 5-3 9-7 10-4-1-7-5-7-10V6l7-4Z" stroke="white" stroke-width="1.6" opacity=".9"/>
+          <path d="M8 12l2.2 2.2L16 8.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Conditional Cluedo Jeopardy</h1>
+        <p>Teacher-led B2 game: conditionals + learning principles + case deduction</p>
+      </div>
     </div>
 
-    <!-- Scrollable Game Board Area -->
-    <div id="game-board-container">
-        <div id="game-board">
-            <!-- Grid injected here -->
+    <div class="controls" role="toolbar" aria-label="Game controls">
+      <button class="btn ghost" id="btnSettings" title="Toggle Game Settings">⚙️ Settings</button>
+      <button class="btn" id="btnUndo" title="Undo last score change">↩ Undo</button>
+      <button class="btn danger" id="btnReset" title="Reset board and scores (keep teams)">Reset</button>
+      <button class="btn primary" id="btnNew" title="New game (reset everything)">New Game</button>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+  <aside>
+    <div class="panel" id="settingsPanel" aria-label="Game Settings">
+      <div class="panel-head">
+        <div>
+          <h2>Game Settings</h2>
+          <p class="hint">Teams, points, timer, quick setup</p>
         </div>
+        <button class="btn small" id="btnCollapse">Hide</button>
+      </div>
+
+      <div class="panel-body">
+        <div class="section">
+          <div class="section-title">
+            <h3>Teams (2–6)</h3>
+            <span>add / remove / rename / set scores</span>
+          </div>
+
+          <div class="row" style="justify-content:space-between">
+            <div class="row">
+              <button class="btn small" id="btnAddTeam">+ Add team</button>
+              <button class="btn small" id="btnRemoveTeam">− Remove team</button>
+            </div>
+            <span class="pill" id="teamCountPill">2 teams</span>
+          </div>
+
+          <div class="divider"></div>
+
+          <div id="settingsTeams"></div>
+
+          <div class="divider"></div>
+
+          <div class="grid2">
+            <div>
+              <label for="startPoints">Set all scores to…</label>
+              <input type="number" id="startPoints" value="0" step="10" />
+            </div>
+            <div class="row" style="align-items:flex-end">
+              <button class="btn small" id="btnApplyStartPoints">Apply</button>
+            </div>
+          </div>
+
+          <p class="mini">Tip: You can also edit scores directly on the scoreboard (left).</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">
+            <h3>Point Values</h3>
+            <span>edit the scale</span>
+          </div>
+          <div class="grid3" id="pointInputs"></div>
+          <p class="mini">These values populate the 5 rows on the board (top to bottom).</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">
+            <h3>Timer (optional)</h3>
+            <span>30–60 seconds</span>
+          </div>
+
+          <div class="row">
+            <label class="checkbox" style="margin:0">
+              <input type="checkbox" id="timerEnabled">
+              Enable timer per clue
+            </label>
+          </div>
+
+          <div class="grid2" style="margin-top:10px">
+            <div>
+              <label for="timerSeconds">Seconds</label>
+              <input type="number" id="timerSeconds" min="30" max="60" step="5" value="45">
+            </div>
+            <div class="row" style="align-items:flex-end">
+              <button class="btn small" id="btnTimerTest">Test beep</button>
+            </div>
+          </div>
+
+          <p class="mini">When enabled, the countdown starts automatically when a clue opens.</p>
+        </div>
+      </div>
     </div>
 
-    <!-- Modal -->
-    <div id="clue-modal">
-        <div class="modal-content">
-            <div class="timer-display" id="modal-timer">60</div>
-            <div class="modal-header" id="modal-title">CATEGORY - $100</div>
-            
-            <div class="clue-text" id="modal-clue">Clue text goes here...</div>
-
-            <button class="btn-reveal" id="btn-reveal" onclick="game.revealAnswer()">Show Answer</button>
-
-            <div class="answer-box" id="modal-answer">
-                <div class="answer-detail"><span class="answer-label">Conditional:</span> <span id="ans-cond"></span></div>
-                <div class="answer-detail"><span class="answer-label">Principle:</span> <span id="ans-princ"></span></div>
-                <div class="answer-detail"><span class="answer-label">Case/Note:</span> <span id="ans-case"></span></div>
-                <div style="margin-top:15px; font-style: italic; color:#ddd;" id="ans-just"></div>
-            </div>
-
-            <div class="modal-controls">
-                <div class="score-controls">
-                    <label>Team:</label>
-                    <select id="team-selector"></select>
-                </div>
-                
-                <div class="score-controls">
-                    <label>Pts:</label>
-                    <input type="number" id="point-override" style="width: 70px;">
-                </div>
-
-                <div class="score-controls" style="flex-wrap:wrap; justify-content:center;">
-                    <button class="btn-correct" onclick="game.handleScore('correct')">✔ Correct</button>
-                    <button class="btn-partial" onclick="game.handleScore('partial')">⚠ Partial</button>
-                    <button class="btn-incorrect" onclick="game.handleScore('incorrect')">✖ Wrong</button>
-                    <button class="btn-secondary" onclick="game.handleScore('steal')" style="font-size:0.8rem; padding: 10px;">Steal ➔</button>
-                </div>
-            </div>
-            
-            <div style="margin-top: 25px;">
-                <button class="btn-secondary" onclick="game.closeModal()">Close (No Score Change)</button>
-            </div>
-        </div>
+    <div class="scoreboard" style="margin-top:16px" aria-label="Scoreboard">
+      <div class="scoreboard-head">
+        <h2>Scoreboard</h2>
+        <span class="pill" id="usedCountPill">0 / 15 used</span>
+      </div>
+      <div class="team-list" id="scoreboardTeams"></div>
+      <p class="mini" style="margin:10px 2px 0">Keyboard: <kbd>Esc</kbd> closes the clue window.</p>
     </div>
+  </aside>
+
+  <main>
+    <div class="board-wrap" aria-label="Jeopardy board">
+      <div class="board-head">
+        <div>
+          <h2>Game Board</h2>
+          <div class="sub" id="boardSub">Click a tile to open a clue. A tile locks after scoring.</div>
+        </div>
+        <div class="row">
+          <span class="pill" id="totalPill">Total teams: 2</span>
+        </div>
+      </div>
+
+      <div class="jeopardy" id="board"></div>
+    </div>
+  </main>
+</div>
+
+<div class="foot">Offline-ready single HTML file • Teacher-led play • No external libraries</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-label="Clue modal">
+  <div class="modal" role="document">
+    <div class="modal-head">
+      <div class="meta">
+        <h3 id="modalCategory">CATEGORY</h3>
+        <p id="modalMeta">Points: 0</p>
+      </div>
+      <div class="row">
+        <button class="btn small" id="btnCloseModal" title="Close (Esc)">Close</button>
+      </div>
+    </div>
+
+    <div class="modal-body">
+      <div class="clue-card" id="clueCard">
+        <p class="clue" id="modalClue">Clue text…</p>
+        <p class="clue-sub" id="clueNote">Answer focuses on conditional type + principle + (optional) case type.</p>
+
+        <div class="answer" id="answerBox" aria-live="polite">
+          <div class="row" style="justify-content:space-between; align-items:center">
+            <strong style="letter-spacing:.2px">Answer Key</strong>
+            <span class="pill" id="answerTag">Revealed</span>
+          </div>
+          <div class="kv" id="answerKV"></div>
+        </div>
+      </div>
+
+      <div class="scoring" aria-label="Scoring controls">
+        <div class="row" style="justify-content:space-between">
+          <h4>Scoring</h4>
+          <button class="btn small" id="btnShowAnswer">Show Answer</button>
+        </div>
+
+        <div class="timer" id="timerBox" style="display:none" aria-label="Timer">
+          <span class="tleft" id="timerText">45s</span>
+          <div class="bar" aria-hidden="true"><i id="timerBar"></i></div>
+          <button class="btn small" id="btnRestartTimer" title="Restart timer">↻</button>
+        </div>
+
+        <div class="grid2">
+          <div>
+            <label for="teamSelect">Team answering</label>
+            <select id="teamSelect"></select>
+          </div>
+          <div>
+            <label for="overridePoints">Points to award/penalize</label>
+            <input type="number" id="overridePoints" step="50" />
+          </div>
+        </div>
+
+        <label class="checkbox">
+          <input type="checkbox" id="stealToggle" checked>
+          Offer a “steal” if incorrect
+        </label>
+
+        <div class="btnrow">
+          <button class="btn good" id="btnCorrect">Correct (+)</button>
+          <button class="btn warn" id="btnPartial">Partial (½)</button>
+          <button class="btn bad" id="btnIncorrect">Incorrect (−)</button>
+        </div>
+
+        <div class="status" id="statusBox"></div>
+
+        <div class="steal" id="stealBox">
+          <h5>Steal chance</h5>
+          <div class="grid2">
+            <div>
+              <label for="stealTeamSelect">Stealing team</label>
+              <select id="stealTeamSelect"></select>
+            </div>
+            <div class="row" style="align-items:flex-end">
+              <span class="pill" id="stealHint">Use the buttons below</span>
+            </div>
+          </div>
+          <div class="btnrow" style="margin-top:10px">
+            <button class="btn good" id="btnStealCorrect">Steal Correct (+)</button>
+            <button class="btn warn" id="btnStealPartial">Steal Partial (½)</button>
+          </div>
+        </div>
+
+        <p class="mini" style="margin:0">Undo works for both score awards and manual score edits.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrong-overlay" id="wrongOverlay" aria-hidden="true"></div>
+<div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
 
 <script>
-    /**
-     * GAME CONTENT DATA - EDIT THIS SECTION TO CHANGE QUESTIONS
-     */
-    const GAME_DATA = {
-        categories: ["Conditional Type", "Learning Principle", "Case Detective"],
-        clues: [
-            // CATEGORY 1: CONDITIONAL TYPE
-            { id: 0, cat: 0, val: 100, text: "Unless students feel safe, they won’t volunteer.", answer: { type: "Real (First Conditional)", principle: "Belonging", case: "Strict classroom", just: "'Unless' = 'If... not'. Expresses a likely future consequence." }},
-            { id: 1, cat: 0, val: 200, text: "If the class gave students more choice, they would participate more.", answer: { type: "Hypothetical (Now - 2nd)", principle: "Independence", case: "Passive learners", just: "Unreal present situation. Describes a desired change in current routine." }},
-            { id: 2, cat: 0, val: 300, text: "Had the teacher delayed correction, students would have spoken more.", answer: { type: "Hypothetical (Past - 3rd Inversion)", principle: "Mastery", case: "Over-correction", just: "Inversion of 'If the teacher had...'. Refers to a past missed opportunity." }},
-            { id: 3, cat: 0, val: 400, text: "Were the course more practical, learners would stay engaged.", answer: { type: "Hypothetical (Now - Inversion)", principle: "Belonging/Relevance", case: "Practical worker", just: "Formal inversion of 'If the course were...'. Present unreal." }},
-            { id: 4, cat: 0, val: 500, text: "Without clear roles, the project would have failed even faster.", answer: { type: "Hypothetical (Past)", principle: "Independence", case: "Group work breakdown", just: "'Without' phrase replaces the 'If' clause. Implies roles WERE clear." }},
+/* ==========================================================
+   EDIT QUESTION CONTENT HERE
+   ----------------------------------------------------------
+   - Edit text, answers, justifications in GAME_CONTENT.
+   - Keep the structure: 3 categories, each with 5 clues.
+   - Each clue has:
+       text: "..."
+       answer: {
+         conditionalType: "Real" | "Hypothetical-now" | "Hypothetical-past",
+         principle: "Belonging" | "Mastery" | "Independence" | "Generosity" | "N/A",
+         caseType: "..." (optional; empty string if not used),
+         justification: "..."
+       }
+   ========================================================== */
 
-            // CATEGORY 2: LEARNING PRINCIPLE
-            { id: 5, cat: 1, val: 100, text: "Students contribute more as long as their ideas are respected.", answer: { type: "Real", principle: "Belonging", case: "Silent student", just: "Safety and respect are prerequisites for belonging and participation." }},
-            { id: 6, cat: 1, val: 200, text: "Unless learners practice consistently, they won’t reach competence.", answer: { type: "Real", principle: "Mastery", case: "Struggling student", just: "Mastery requires the opportunity to practice and fail safely." }},
-            { id: 7, cat: 1, val: 300, text: "Provided that students manage their own roles, the teacher can step back.", answer: { type: "Real", principle: "Independence", case: "Teacher-centered class", just: "Independence means autonomy and ownership of the process." }},
-            { id: 8, cat: 1, val: 400, text: "Were students to support weaker classmates, the group would improve.", answer: { type: "Hypothetical (Now)", principle: "Generosity", case: "Competitive class", just: "Generosity builds community by contributing to others' success." }},
-            { id: 9, cat: 1, val: 500, text: "Had the group shared responsibility fairly, conflict would have decreased.", answer: { type: "Hypothetical (Past)", principle: "Belonging", case: "Group conflict", just: "Fairness and shared norms are essential for group cohesion (Belonging)." }},
-
-            // CATEGORY 3: CASE DETECTIVE
-            { id: 10, cat: 2, val: 100, text: "Unless the room feels safe, only a few people will speak.", answer: { type: "Real", principle: "Belonging", case: "The Silent Student", just: "The student remains silent because the environment feels threatening." }},
-            { id: 11, cat: 2, val: 200, text: "If assessment rewarded creativity, more students would show strengths.", answer: { type: "Hypothetical (Now)", principle: "Mastery", case: "The Creative Student", just: "This student is failing not due to ability, but because the format ignores their talent." }},
-            { id: 12, cat: 2, val: 300, text: "Had roles been assigned, two people wouldn’t have done all the work.", answer: { type: "Hypothetical (Past)", principle: "Generosity/Independence", case: "Group Work Breakdown", just: "Lack of structure allowed 'hogs' to take over and 'logs' to do nothing." }},
-            { id: 13, cat: 2, val: 400, text: "Were tasks connected to real life, a working student would participate more.", answer: { type: "Hypothetical (Now)", principle: "Independence", case: "The Practical Worker", just: "This adult learner disengages because the content feels abstract or useless." }},
-            { id: 14, cat: 2, val: 500, text: "As long as someone studies alone, they may progress—but the group might not.", answer: { type: "Real", principle: "Generosity", case: "The Independent Learner", just: "High competence alone isn't enough; the class functions best when knowledge is shared." }},
-        ]
-    };
-
-    /**
-     * GAME LOGIC
-     */
-    const game = {
-        teams: [
-            { name: "Alpha", score: 0 },
-            { name: "Beta", score: 0 },
-            { name: "Gamma", score: 0 }
-        ],
-        completedClues: [], 
-        currentClueId: null,
-        historyStack: [],
-        timerEnabled: false,
-        timerInterval: null,
-        timeLeft: 60,
-
-        // --- Initialization ---
-        init: function() {
-            this.completedClues = [];
-            this.teams.forEach(t => t.score = 0);
-            this.historyStack = [];
-            this.renderSettings();
-            this.renderBoard();
-            this.renderScores();
-            this.closeModal();
-            document.getElementById('settings-panel').classList.remove('open');
+const GAME_CONTENT = {
+  title: "Conditional Cluedo Jeopardy",
+  categories: [
+    {
+      name: "CONDITIONAL TYPE",
+      clues: [
+        {
+          text: "Unless students feel safe, they won’t volunteer.",
+          answer: {
+            conditionalType: "Real",
+            principle: "N/A",
+            caseType: "",
+            justification: "Present condition + future result; ‘unless’ = ‘if not’ (real possibility)."
+          }
         },
-
-        // --- State Management ---
-        pushHistory: function() {
-            const state = {
-                teams: JSON.parse(JSON.stringify(this.teams)),
-                completedClues: [...this.completedClues]
-            };
-            this.historyStack.push(state);
-            if (this.historyStack.length > 10) this.historyStack.shift(); 
+        {
+          text: "If the class gave students more choice, they would participate more.",
+          answer: {
+            conditionalType: "Hypothetical-now",
+            principle: "N/A",
+            caseType: "",
+            justification: "Past simple + would: an unreal/imagined change in the present situation."
+          }
         },
-
-        undo: function() {
-            if (this.historyStack.length === 0) {
-                alert("Nothing to undo!");
-                return;
-            }
-            const state = this.historyStack.pop();
-            this.teams = state.teams;
-            this.completedClues = state.completedClues;
-            this.renderBoard();
-            this.renderScores();
+        {
+          text: "Had the teacher delayed correction, students would have spoken more.",
+          answer: {
+            conditionalType: "Hypothetical-past",
+            principle: "N/A",
+            caseType: "",
+            justification: "Past perfect + would have: an unreal past condition with a different past result."
+          }
         },
-
-        // --- UI Rendering ---
-        renderBoard: function() {
-            const board = document.getElementById('game-board');
-            board.innerHTML = '';
-
-            // Headers
-            GAME_DATA.categories.forEach(cat => {
-                const div = document.createElement('div');
-                div.className = 'cat-header';
-                div.textContent = cat;
-                board.appendChild(div);
-            });
-
-            // Grid
-            for (let row = 0; row < 5; row++) {
-                for (let col = 0; col < 3; col++) {
-                    const index = (col * 5) + row; 
-                    const clue = GAME_DATA.clues[index];
-
-                    const tile = document.createElement('div');
-                    tile.className = 'clue-tile';
-                    
-                    if (this.completedClues.includes(clue.id)) {
-                        tile.classList.add('disabled');
-                        tile.textContent = "";
-                    } else {
-                        tile.textContent = `$${clue.val}`;
-                        tile.onclick = () => this.openModal(clue.id);
-                    }
-                    board.appendChild(tile);
-                }
-            }
+        {
+          text: "Were the course more practical, learners would stay engaged.",
+          answer: {
+            conditionalType: "Hypothetical-now",
+            principle: "N/A",
+            caseType: "",
+            justification: "Inversion ‘were…’ shows a present hypothetical/imagined condition."
+          }
         },
-
-        renderScores: function() {
-            const sb = document.getElementById('scoreboard');
-            sb.innerHTML = '';
-            
-            this.teams.forEach((team, index) => {
-                const card = document.createElement('div');
-                card.className = 'team-card';
-                card.innerHTML = `
-                    <span class="team-name" contenteditable="true" onblur="game.updateTeamName(${index}, this.innerText)">${team.name}</span>
-                    <span class="team-score">${team.score}</span>
-                    <div>
-                        <button class="score-adjust" onclick="game.manualAdjust(${index}, 100)">+100</button>
-                        <button class="score-adjust" onclick="game.manualAdjust(${index}, -100)">-100</button>
-                    </div>
-                `;
-                sb.appendChild(card);
-            });
-            
-            const select = document.getElementById('team-selector');
-            const currentVal = select.value;
-            select.innerHTML = '';
-            this.teams.forEach((team, index) => {
-                const opt = document.createElement('option');
-                opt.value = index;
-                opt.textContent = team.name;
-                select.appendChild(opt);
-            });
-            // Try to keep selection, but handle wrap-around cases later if needed
-            if(currentVal && currentVal < this.teams.length) select.value = currentVal;
-        },
-
-        renderSettings: function() {
-            const container = document.getElementById('team-names-config');
-            container.innerHTML = '';
-            this.teams.forEach((team, index) => {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = team.name;
-                input.onchange = (e) => { this.teams[index].name = e.target.value; this.renderScores(); };
-                container.appendChild(input);
-            });
-            document.getElementById('team-count').value = this.teams.length;
-        },
-
-        updateTeamCount: function() {
-            const count = parseInt(document.getElementById('team-count').value);
-            if (count < 2 || count > 6) return alert("Teams must be between 2 and 6");
-            
-            while (this.teams.length < count) {
-                this.teams.push({ name: `Team ${this.teams.length + 1}`, score: 0 });
-            }
-            while (this.teams.length > count) {
-                this.teams.pop();
-            }
-            this.renderScores();
-            this.renderSettings();
-        },
-
-        updateTeamName: function(index, newName) {
-            this.teams[index].name = newName;
-            this.renderScores();
-        },
-
-        manualAdjust: function(index, amount) {
-            this.pushHistory();
-            this.teams[index].score += amount;
-            this.renderScores();
-        },
-
-        // --- Gameplay ---
-        openModal: function(id) {
-            this.currentClueId = id;
-            const clue = GAME_DATA.clues.find(c => c.id === id);
-            
-            document.getElementById('modal-title').textContent = `${GAME_DATA.categories[clue.cat]} - $${clue.val}`;
-            document.getElementById('modal-clue').textContent = clue.text;
-            document.getElementById('point-override').value = clue.val;
-            
-            document.getElementById('btn-reveal').style.display = 'inline-block';
-            document.getElementById('modal-answer').classList.remove('visible');
-            document.getElementById('ans-cond').textContent = clue.answer.type;
-            document.getElementById('ans-princ').textContent = clue.answer.principle;
-            document.getElementById('ans-case').textContent = clue.answer.case || "N/A";
-            document.getElementById('ans-just').textContent = clue.answer.just;
-
-            document.getElementById('clue-modal').classList.add('visible');
-            
-            // Remove any shake classes if present
-            document.querySelector('.modal-content').classList.remove('anim-shake');
-
-            if (this.timerEnabled) this.startTimer();
-        },
-
-        closeModal: function() {
-            clearInterval(this.timerInterval);
-            document.getElementById('clue-modal').classList.remove('visible');
-            document.body.classList.remove('anim-wrong', 'anim-partial');
-            document.querySelector('.modal-content').classList.remove('anim-shake');
-            
-            if (this.currentClueId !== null && !this.completedClues.includes(this.currentClueId)) {
-                 this.completedClues.push(this.currentClueId);
-            }
-            this.renderBoard();
-            this.currentClueId = null;
-        },
-
-        revealAnswer: function() {
-            clearInterval(this.timerInterval);
-            document.getElementById('btn-reveal').style.display = 'none';
-            document.getElementById('modal-answer').classList.add('visible');
-        },
-
-        handleScore: function(type) {
-            const teamIndex = parseInt(document.getElementById('team-selector').value);
-            const points = parseInt(document.getElementById('point-override').value);
-            
-            this.pushHistory();
-            
-            const modalContent = document.querySelector('.modal-content');
-            modalContent.classList.remove('anim-shake');
-            void modalContent.offsetWidth; // Trigger reflow
-
-            if (type === 'correct') {
-                this.teams[teamIndex].score += points;
-                confetti.explode();
-                setTimeout(() => this.closeModal(), 1500);
-
-            } else if (type === 'partial') {
-                this.teams[teamIndex].score += Math.floor(points / 2);
-                document.body.classList.remove('anim-partial');
-                void document.body.offsetWidth;
-                document.body.classList.add('anim-partial');
-                setTimeout(() => this.closeModal(), 1000);
-
-            } else if (type === 'incorrect') {
-                this.teams[teamIndex].score -= points; 
-                modalContent.classList.add('anim-shake');
-                setTimeout(() => this.closeModal(), 1000);
-
-            } else if (type === 'steal') {
-                // Deduct points from current team
-                this.teams[teamIndex].score -= points;
-                
-                // Shake modal for feedback
-                modalContent.classList.add('anim-shake');
-                
-                // Switch to next team
-                const nextIndex = (teamIndex + 1) % this.teams.length;
-                this.renderScores(); // Updates scores in background
-                document.getElementById('team-selector').value = nextIndex; // Force switch
-                // Do not close modal
-            }
-
-            // Only render scores if NOT steal (steal does it manually to control selector)
-            if (type !== 'steal') {
-                this.renderScores();
-            }
-        },
-
-        toggleTimer: function() {
-            this.timerEnabled = !this.timerEnabled;
-            document.getElementById('timer-btn').textContent = this.timerEnabled ? "Timer: 30s" : "Timer: OFF";
-            document.getElementById('modal-timer').classList.toggle('active', this.timerEnabled);
-        },
-
-        startTimer: function() {
-            this.timeLeft = 30;
-            const display = document.getElementById('modal-timer');
-            display.textContent = this.timeLeft;
-            clearInterval(this.timerInterval);
-            
-            this.timerInterval = setInterval(() => {
-                this.timeLeft--;
-                display.textContent = this.timeLeft;
-                if (this.timeLeft <= 0) {
-                    clearInterval(this.timerInterval);
-                    display.textContent = "TIME UP";
-                }
-            }, 1000);
-        },
-        
-        toggleSettings: function() {
-            document.getElementById('settings-panel').classList.toggle('open');
+        {
+          text: "Without clear roles, the project would have failed even faster.",
+          answer: {
+            conditionalType: "Hypothetical-past",
+            principle: "N/A",
+            caseType: "",
+            justification: "‘Would have failed’ signals an unreal past outcome; the condition is implied (‘if there hadn’t been…’)."
+          }
         }
-    };
-
-    /**
-     * CONFETTI UTILITY
-     */
-    const confetti = {
-        canvas: document.getElementById('confetti-canvas'),
-        ctx: document.getElementById('confetti-canvas').getContext('2d'),
-        particles: [],
-        animId: null,
-
-        resize: function() {
-            this.canvas.width = window.innerWidth;
-            this.canvas.height = window.innerHeight;
+      ]
+    },
+    {
+      name: "LEARNING PRINCIPLE",
+      clues: [
+        {
+          text: "Students contribute more as long as their ideas are respected.",
+          answer: {
+            conditionalType: "Real",
+            principle: "Belonging",
+            caseType: "",
+            justification: "Safety and respect increase participation; ‘as long as’ sets a real condition."
+          }
         },
-
-        explode: function() {
-            this.particles = [];
-            const colors = ['#FFCC00', '#ff0000', '#00ff00', '#0000ff', '#ffffff'];
-            
-            for (let i = 0; i < 150; i++) {
-                this.particles.push({
-                    x: window.innerWidth / 2,
-                    y: window.innerHeight / 2,
-                    vx: (Math.random() - 0.5) * 20,
-                    vy: (Math.random() - 0.5) * 20,
-                    size: Math.random() * 8 + 4,
-                    color: colors[Math.floor(Math.random() * colors.length)],
-                    life: 100
-                });
-            }
-            this.loop();
+        {
+          text: "Unless learners practice consistently, they won’t reach competence.",
+          answer: {
+            conditionalType: "Real",
+            principle: "Mastery",
+            caseType: "",
+            justification: "Regular practice supports skill-building; ‘unless’ states a real requirement."
+          }
         },
-
-        loop: function() {
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            let alive = false;
-            
-            this.particles.forEach(p => {
-                if (p.life > 0) {
-                    alive = true;
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vy += 0.5;
-                    p.life -= 1;
-                    p.size *= 0.96;
-
-                    this.ctx.fillStyle = p.color;
-                    this.ctx.fillRect(p.x, p.y, p.size, p.size);
-                }
-            });
-
-            if (alive) {
-                this.animId = requestAnimationFrame(() => this.loop());
-            }
+        {
+          text: "Provided that students manage their own roles, the teacher can step back.",
+          answer: {
+            conditionalType: "Real",
+            principle: "Independence",
+            caseType: "",
+            justification: "Learners self-manage; teacher reduces control—real condition with present/future effect."
+          }
+        },
+        {
+          text: "Were students to support weaker classmates, the group would improve.",
+          answer: {
+            conditionalType: "Hypothetical-now",
+            principle: "Generosity",
+            caseType: "",
+            justification: "Inversion + would: a present hypothetical; peer support benefits the group."
+          }
+        },
+        {
+          text: "Had the group shared responsibility fairly, conflict would have decreased.",
+          answer: {
+            conditionalType: "Hypothetical-past",
+            principle: "Generosity",
+            caseType: "",
+            justification: "Past perfect + would have: unreal past condition; fairness reduces conflict."
+          }
         }
-    };
+      ]
+    },
+    {
+      name: "CASE DETECTIVE",
+      clues: [
+        {
+          text: "Unless the room feels safe, only a few people will speak.",
+          answer: {
+            conditionalType: "Real",
+            principle: "Belonging",
+            caseType: "Silent student / Unsafe classroom",
+            justification: "Psychological safety affects participation; real condition linked to belonging."
+          }
+        },
+        {
+          text: "If assessment rewarded creativity, more students would show strengths.",
+          answer: {
+            conditionalType: "Hypothetical-now",
+            principle: "Mastery",
+            caseType: "Creative student",
+            justification: "Changing assessment (present hypothetical) would reveal abilities and support mastery."
+          }
+        },
+        {
+          text: "Had roles been assigned, two people wouldn’t have done all the work.",
+          answer: {
+            conditionalType: "Hypothetical-past",
+            principle: "Independence",
+            caseType: "Group work breakdown",
+            justification: "Clear roles in the past could have prevented imbalance; shared responsibility increases autonomy."
+          }
+        },
+        {
+          text: "Were tasks connected to real life, a working student would participate more.",
+          answer: {
+            conditionalType: "Hypothetical-now",
+            principle: "Mastery",
+            caseType: "Practical worker",
+            justification: "Real-life relevance (present hypothetical) boosts engagement and skill focus."
+          }
+        },
+        {
+          text: "As long as someone studies alone, they may progress—but the group might not.",
+          answer: {
+            conditionalType: "Real",
+            principle: "Independence",
+            caseType: "Independent learner",
+            justification: "Real condition: solo study can help one learner, but collaboration may suffer."
+          }
+        }
+      ]
+    }
+  ]
+};
 
-    window.addEventListener('resize', () => confetti.resize());
-    confetti.resize();
-    game.init();
+/* ==========================================================
+   GAME STATE (saved locally)
+   ========================================================== */
+const STORAGE_KEY = "ccj_state_v1";
 
+const DEFAULT_POINT_VALUES = [100, 200, 300, 400, 500];
+const DEFAULT_TEAMS = [
+  { name: "Team 1", score: 0 },
+  { name: "Team 2", score: 0 }
+];
+
+let state = {
+  teams: structuredClone(DEFAULT_TEAMS),
+  pointValues: structuredClone(DEFAULT_POINT_VALUES),
+  used: {},              // key: "c{catIndex}r{rowIndex}" => true
+  history: [],           // stack of score changes
+  timerEnabled: false,
+  timerSeconds: 45
+};
+
+let currentClue = null;     // {catIndex,rowIndex,key,points,categoryName,clueObj}
+let timer = { intervalId: null, total: 0, remaining: 0 };
+
+/* ==========================================================
+   DOM HELPERS
+   ========================================================== */
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+function isNumber(x){ return typeof x === "number" && !Number.isNaN(x) && Number.isFinite(x); }
+function safeInt(v, fallback=0){
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+function formatScore(n){
+  if (!Number.isFinite(n)) return "0";
+  // Show clean integers; allow decimals only if needed.
+  const isInt = Math.abs(n - Math.round(n)) < 1e-9;
+  return isInt ? String(Math.round(n)) : String(Number(n.toFixed(1)));
+}
+function usedKey(catIndex, rowIndex){ return `c${catIndex}r${rowIndex}`; }
+
+/* ==========================================================
+   PERSISTENCE
+   ========================================================== */
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){}
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const parsed = JSON.parse(raw);
+
+    // Basic validation / defaults:
+    if(parsed && Array.isArray(parsed.teams) && parsed.teams.length >= 2 && parsed.teams.length <= 6){
+      state.teams = parsed.teams.map(t => ({
+        name: String(t.name ?? "Team"),
+        score: safeInt(t.score, 0)
+      }));
+    }
+    if(parsed && Array.isArray(parsed.pointValues) && parsed.pointValues.length === 5){
+      state.pointValues = parsed.pointValues.map(v => safeInt(v, 100));
+    }
+    if(parsed && parsed.used && typeof parsed.used === "object") state.used = parsed.used;
+    if(parsed && Array.isArray(parsed.history)) state.history = parsed.history;
+    if(parsed && typeof parsed.timerEnabled === "boolean") state.timerEnabled = parsed.timerEnabled;
+    if(parsed && Number.isFinite(parsed.timerSeconds)) state.timerSeconds = clamp(parsed.timerSeconds, 30, 60);
+  }catch(e){}
+}
+
+/* ==========================================================
+   RENDERING
+   ========================================================== */
+function renderAll(){
+  renderSettingsPanel();
+  renderScoreboard();
+  renderBoard();
+  renderHeaderBadges();
+}
+
+function renderHeaderBadges(){
+  $("#totalPill").textContent = `Total teams: ${state.teams.length}`;
+  $("#teamCountPill").textContent = `${state.teams.length} team${state.teams.length===1?"":"s"}`;
+
+  const usedCount = Object.keys(state.used).length;
+  $("#usedCountPill").textContent = `${usedCount} / 15 used`;
+}
+
+function renderSettingsPanel(){
+  // Open/close state handled by CSS class on #settingsPanel
+
+  // Teams in settings
+  const holder = $("#settingsTeams");
+  holder.innerHTML = "";
+
+  state.teams.forEach((team, idx) => {
+    const wrap = document.createElement("div");
+    wrap.className = "grid2";
+    wrap.style.marginBottom = "10px";
+    wrap.innerHTML = `
+      <div>
+        <label>Team ${idx+1} name</label>
+        <input type="text" value="${escapeHtml(team.name)}" data-team-name="${idx}" />
+      </div>
+      <div>
+        <label>Team ${idx+1} score</label>
+        <input type="number" value="${team.score}" step="10" data-team-score="${idx}" />
+      </div>
+    `;
+    holder.appendChild(wrap);
+  });
+
+  // Point values inputs (5)
+  const pointsWrap = $("#pointInputs");
+  pointsWrap.innerHTML = "";
+  state.pointValues.forEach((pv, i) => {
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <label>Row ${i+1}</label>
+      <input type="number" value="${pv}" step="50" data-point-index="${i}" />
+    `;
+    pointsWrap.appendChild(div);
+  });
+
+  // Timer controls
+  $("#timerEnabled").checked = state.timerEnabled;
+  $("#timerSeconds").value = state.timerSeconds;
+
+  // Update buttons availability
+  $("#btnAddTeam").disabled = state.teams.length >= 6;
+  $("#btnRemoveTeam").disabled = state.teams.length <= 2;
+
+  // Bind inputs (delegated via container)
+  holder.oninput = (e) => {
+    const el = e.target;
+    if(el.matches("[data-team-name]")){
+      const i = Number(el.dataset.teamName);
+      if(state.teams[i]){
+        state.teams[i].name = el.value.trim() || `Team ${i+1}`;
+        syncTeamInputsEverywhere(i);
+        saveState();
+        renderScoreboard();
+      }
+    }
+    if(el.matches("[data-team-score]")){
+      const i = Number(el.dataset.teamScore);
+      const newScore = safeInt(el.value, 0);
+      setTeamScore(i, newScore, {type:"manual"});
+      syncTeamInputsEverywhere(i);
+      renderScoreboard();
+    }
+  };
+
+  pointsWrap.oninput = (e) => {
+    const el = e.target;
+    if(el.matches("[data-point-index]")){
+      const i = Number(el.dataset.pointIndex);
+      state.pointValues[i] = safeInt(el.value, DEFAULT_POINT_VALUES[i]);
+      saveState();
+      renderBoard();
+    }
+  };
+}
+
+function renderScoreboard(){
+  const wrap = $("#scoreboardTeams");
+  wrap.innerHTML = "";
+
+  state.teams.forEach((team, idx) => {
+    const card = document.createElement("div");
+    card.className = "team-card";
+    card.innerHTML = `
+      <div class="team-name">
+        <label style="margin:0; font-size:11.5px">Team ${idx+1}</label>
+        <input type="text" value="${escapeHtml(team.name)}" aria-label="Team name" data-sb-name="${idx}" />
+        <div class="team-meta">
+          <span class="pill">#${idx+1}</span>
+          <span style="opacity:.9">Edit name / score</span>
+        </div>
+      </div>
+      <div class="score-box">
+        <label style="margin:0; font-size:11.5px; text-align:right">Score</label>
+        <input type="number" value="${team.score}" step="10" aria-label="Team score" data-sb-score="${idx}" />
+      </div>
+    `;
+    wrap.appendChild(card);
+  });
+
+  // Bind inline edits (delegated)
+  wrap.oninput = (e) => {
+    const el = e.target;
+    if(el.matches("[data-sb-name]")){
+      const i = Number(el.dataset.sbName);
+      if(state.teams[i]){
+        state.teams[i].name = el.value.trim() || `Team ${i+1}`;
+        syncTeamInputsEverywhere(i);
+        saveState();
+        // Update selects in modal if open
+        refreshTeamSelects();
+      }
+    }
+    if(el.matches("[data-sb-score]")){
+      const i = Number(el.dataset.sbScore);
+      const newScore = safeInt(el.value, 0);
+      setTeamScore(i, newScore, {type:"manual"});
+      syncTeamInputsEverywhere(i);
+    }
+  };
+
+  refreshTeamSelects();
+}
+
+function renderBoard(){
+  const board = $("#board");
+  board.innerHTML = "";
+
+  GAME_CONTENT.categories.forEach((cat, catIndex) => {
+    const col = document.createElement("div");
+    col.className = "cat";
+
+    const title = document.createElement("div");
+    title.className = "cat-title";
+    title.textContent = cat.name;
+    col.appendChild(title);
+
+    const tiles = document.createElement("div");
+    tiles.className = "tiles";
+
+    for(let rowIndex=0; rowIndex<5; rowIndex++){
+      const points = state.pointValues[rowIndex] ?? DEFAULT_POINT_VALUES[rowIndex];
+      const key = usedKey(catIndex, rowIndex);
+      const isUsed = !!state.used[key];
+
+      const tile = document.createElement("button");
+      tile.className = "tile" + (isUsed ? " used" : "");
+      tile.type = "button";
+      tile.disabled = isUsed;
+      tile.setAttribute("data-cat", catIndex);
+      tile.setAttribute("data-row", rowIndex);
+      tile.setAttribute("aria-label", `${cat.name} for ${points} points`);
+      tile.innerHTML = `<span class="points">${points}</span>`;
+
+      tiles.appendChild(tile);
+    }
+    col.appendChild(tiles);
+    board.appendChild(col);
+  });
+
+  // Click handler (delegated)
+  board.onclick = (e) => {
+    const tile = e.target.closest(".tile");
+    if(!tile || tile.disabled) return;
+
+    const catIndex = Number(tile.dataset.cat);
+    const rowIndex = Number(tile.dataset.row);
+
+    openClue(catIndex, rowIndex);
+  };
+
+  renderHeaderBadges();
+}
+
+/* ==========================================================
+   MODAL + CLUE LOGIC
+   ========================================================== */
+function openClue(catIndex, rowIndex){
+  const category = GAME_CONTENT.categories[catIndex];
+  const clueObj = category.clues[rowIndex];
+
+  if(!category || !clueObj) return;
+
+  const points = state.pointValues[rowIndex] ?? DEFAULT_POINT_VALUES[rowIndex];
+  const key = usedKey(catIndex, rowIndex);
+
+  currentClue = {
+    catIndex, rowIndex, key,
+    points,
+    categoryName: category.name,
+    clueObj
+  };
+
+  // Fill modal
+  $("#modalCategory").textContent = category.name;
+  $("#modalMeta").textContent = `Points: ${points}`;
+  $("#modalClue").textContent = clueObj.text;
+
+  // Reset answer reveal
+  $("#answerBox").classList.remove("open");
+  $("#answerKV").innerHTML = "";
+  $("#answerTag").textContent = "Hidden";
+
+  // Reset scoring UI
+  $("#overridePoints").value = points;
+  $("#statusBox").classList.remove("open");
+  $("#statusBox").textContent = "";
+  $("#stealBox").classList.remove("open");
+
+  // Timer
+  setupTimerForClue();
+
+  // Ensure team selects exist
+  refreshTeamSelects();
+
+  // Open modal
+  $("#modalBackdrop").classList.add("open");
+
+  // Focus close for keyboard
+  setTimeout(() => $("#btnCloseModal").focus(), 0);
+}
+
+function closeClue(){
+  stopTimer();
+  $("#modalBackdrop").classList.remove("open");
+  currentClue = null;
+}
+
+function revealAnswer(){
+  if(!currentClue) return;
+  const a = currentClue.clueObj.answer;
+
+  const rows = [
+    ["Conditional type", a.conditionalType || "—"],
+    ["Principle", a.principle || "—"],
+  ];
+  if(a.caseType && a.caseType.trim()){
+    rows.push(["Case type", a.caseType]);
+  }
+  rows.push(["Justification", a.justification || "—"]);
+
+  const kv = $("#answerKV");
+  kv.innerHTML = rows.map(([k,v]) => `
+    <div class="k">${escapeHtml(k)}</div>
+    <div class="v">${escapeHtml(v)}</div>
+  `).join("");
+
+  $("#answerBox").classList.add("open");
+  $("#answerTag").textContent = "Revealed";
+}
+
+function lockCurrentTile(){
+  if(!currentClue) return;
+  state.used[currentClue.key] = true;
+  saveState();
+  renderBoard();
+  renderHeaderBadges();
+}
+
+/* ==========================================================
+   SCORING + HISTORY (Undo)
+   ========================================================== */
+function setTeamScore(teamIndex, newScore, meta={type:"manual"}){
+  const team = state.teams[teamIndex];
+  if(!team) return;
+
+  const prev = safeInt(team.score, 0);
+  const next = safeInt(newScore, 0);
+
+  if(prev === next) { saveState(); return; }
+
+  // Push history for undo
+  pushHistory({
+    kind: meta.type || "manual",
+    teamIndex,
+    prevScore: prev,
+    nextScore: next,
+    delta: next - prev,
+    tileKey: meta.tileKey || null,
+    prevUsed: meta.prevUsed ?? null,
+    nextUsed: meta.nextUsed ?? null,
+    note: meta.note || ""
+  });
+
+  team.score = next;
+  saveState();
+}
+
+function applyDelta(teamIndex, delta, meta={}){
+  const team = state.teams[teamIndex];
+  if(!team) return;
+  const prev = safeInt(team.score, 0);
+  const next = prev + delta;
+
+  pushHistory({
+    kind: meta.kind || "score",
+    teamIndex,
+    prevScore: prev,
+    nextScore: next,
+    delta,
+    tileKey: meta.tileKey || null,
+    prevUsed: meta.prevUsed ?? null,
+    nextUsed: meta.nextUsed ?? null,
+    note: meta.note || ""
+  });
+
+  team.score = next;
+  saveState();
+}
+
+function pushHistory(entry){
+  state.history.push({
+    ...entry,
+    ts: Date.now()
+  });
+  // Keep it lightweight
+  if(state.history.length > 80) state.history.shift();
+  saveState();
+  updateUndoButton();
+}
+
+function updateUndoButton(){
+  $("#btnUndo").disabled = state.history.length === 0;
+}
+
+function undoLast(){
+  const entry = state.history.pop();
+  if(!entry) return;
+
+  // Revert score
+  if(state.teams[entry.teamIndex]){
+    state.teams[entry.teamIndex].score = entry.prevScore;
+  }
+
+  // Revert tile used state if present
+  if(entry.tileKey && entry.prevUsed !== null){
+    if(entry.prevUsed){
+      state.used[entry.tileKey] = true;
+    }else{
+      delete state.used[entry.tileKey];
+    }
+  }
+
+  saveState();
+  renderAll();
+  updateUndoButton();
+}
+
+/* ==========================================================
+   AWARD BUTTONS
+   ========================================================== */
+function getOverridePoints(){
+  const raw = Number($("#overridePoints").value);
+  return Number.isFinite(raw) ? raw : (currentClue?.points ?? 0);
+}
+
+function awardCorrect(teamIndex, points, isSteal=false){
+  if(!currentClue) return;
+
+  const tileKey = currentClue.key;
+  const prevUsed = !!state.used[tileKey];
+
+  // Lock tile after scoring (per spec)
+  lockCurrentTile();
+
+  // Score
+  applyDelta(teamIndex, Math.abs(points), {
+    kind: isSteal ? "steal-correct" : "correct",
+    tileKey,
+    prevUsed,
+    nextUsed: true,
+    note: isSteal ? "Steal correct" : "Correct"
+  });
+
+  renderScoreboard();
+  animateConfetti(isSteal ? 38 : 70);
+  pulseClueCard();
+  showStatus(`${state.teams[teamIndex].name} +${formatScore(Math.abs(points))} points.`);
+}
+
+function awardPartial(teamIndex, points, isSteal=false){
+  if(!currentClue) return;
+
+  const half = points / 2;
+  const tileKey = currentClue.key;
+  const prevUsed = !!state.used[tileKey];
+
+  lockCurrentTile();
+
+  applyDelta(teamIndex, half, {
+    kind: isSteal ? "steal-partial" : "partial",
+    tileKey,
+    prevUsed,
+    nextUsed: true,
+    note: isSteal ? "Steal partial" : "Partial"
+  });
+
+  renderScoreboard();
+  animateConfetti(isSteal ? 18 : 26); // subtle
+  pulseClueCard();
+  showStatus(`${state.teams[teamIndex].name} +${formatScore(half)} points (partial).`);
+}
+
+function awardIncorrect(teamIndex, points){
+  if(!currentClue) return;
+
+  const tileKey = currentClue.key;
+  const prevUsed = !!state.used[tileKey];
+
+  lockCurrentTile();
+
+  // Penalty: subtract points (teacher can override manually if desired)
+  applyDelta(teamIndex, -Math.abs(points), {
+    kind: "incorrect",
+    tileKey,
+    prevUsed,
+    nextUsed: true,
+    note: "Incorrect"
+  });
+
+  renderScoreboard();
+  playWrongFlash();
+  showStatus(`${state.teams[teamIndex].name} −${formatScore(Math.abs(points))} points.`, "bad");
+
+  // Offer steal
+  const stealAllowed = $("#stealToggle").checked;
+  if(stealAllowed){
+    $("#stealBox").classList.add("open");
+  }
+}
+
+/* ==========================================================
+   SETTINGS ACTIONS
+   ========================================================== */
+function addTeam(){
+  if(state.teams.length >= 6) return;
+  state.teams.push({ name: `Team ${state.teams.length + 1}`, score: 0 });
+  saveState();
+  renderAll();
+}
+function removeTeam(){
+  if(state.teams.length <= 2) return;
+  state.teams.pop();
+  saveState();
+  renderAll();
+}
+function applyStartPoints(){
+  const v = safeInt($("#startPoints").value, 0);
+  state.teams.forEach((t, i) => setTeamScore(i, v, {type:"manual", note:"Set all scores"}));
+  saveState();
+  renderAll();
+}
+
+/* ==========================================================
+   RESET / NEW
+   ========================================================== */
+function resetGameKeepTeams(){
+  // Keep team names, reset scores and board
+  state.used = {};
+  state.history = [];
+  state.teams = state.teams.map((t, i) => ({ name: t.name || `Team ${i+1}`, score: 0 }));
+  saveState();
+  renderAll();
+  updateUndoButton();
+}
+function newGameAll(){
+  state = {
+    teams: structuredClone(DEFAULT_TEAMS),
+    pointValues: structuredClone(DEFAULT_POINT_VALUES),
+    used: {},
+    history: [],
+    timerEnabled: false,
+    timerSeconds: 45
+  };
+  saveState();
+  renderAll();
+  updateUndoButton();
+}
+
+/* ==========================================================
+   TIMER
+   ========================================================== */
+function setupTimerForClue(){
+  const enabled = !!state.timerEnabled;
+  const seconds = clamp(safeInt(state.timerSeconds, 45), 30, 60);
+
+  const box = $("#timerBox");
+  if(!enabled){
+    box.style.display = "none";
+    stopTimer();
+    return;
+  }
+  box.style.display = "flex";
+  startTimer(seconds);
+}
+
+function startTimer(totalSeconds){
+  stopTimer();
+  timer.total = totalSeconds;
+  timer.remaining = totalSeconds;
+  renderTimer();
+  timer.intervalId = setInterval(() => {
+    timer.remaining -= 1;
+    renderTimer();
+    if(timer.remaining <= 0){
+      stopTimer();
+      beep();
+      showStatus("Time's up! (Teacher decides scoring.)", "warn");
+    }
+  }, 1000);
+}
+
+function stopTimer(){
+  if(timer.intervalId){
+    clearInterval(timer.intervalId);
+    timer.intervalId = null;
+  }
+}
+
+function renderTimer(){
+  const t = Math.max(0, timer.remaining);
+  $("#timerText").textContent = `${t}s`;
+  const ratio = timer.total > 0 ? (t / timer.total) : 0;
+  $("#timerBar").style.transform = `scaleX(${ratio})`;
+}
+
+function beep(){
+  // Simple Web Audio beep (offline)
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.value = 880;
+    g.gain.value = 0.06;
+    o.connect(g); g.connect(ctx.destination);
+    o.start();
+    setTimeout(() => { o.stop(); ctx.close(); }, 130);
+  }catch(e){}
+}
+
+/* ==========================================================
+   FEEDBACK ANIMATIONS
+   ========================================================== */
+function playWrongFlash(){
+  const ov = $("#wrongOverlay");
+  ov.classList.remove("play");
+  // Force reflow so the animation restarts
+  void ov.offsetWidth;
+  ov.classList.add("play");
+  setTimeout(() => ov.classList.remove("play"), 1900);
+}
+
+function pulseClueCard(){
+  const card = $("#clueCard");
+  card.classList.remove("pulse");
+  void card.offsetWidth;
+  card.classList.add("pulse");
+}
+
+function animateConfetti(count=60){
+  const layer = $("#confettiLayer");
+  const W = window.innerWidth;
+  // Create pieces
+  const colors = [
+    "rgba(124,92,255,.95)",
+    "rgba(34,211,238,.95)",
+    "rgba(50,213,131,.95)",
+    "rgba(245,158,11,.95)",
+    "rgba(255,255,255,.9)"
+  ];
+  for(let i=0;i<count;i++){
+    const el = document.createElement("div");
+    el.className = "confetti";
+    const x = Math.random() * (W - 10);
+    const delay = Math.random() * 0.18;
+    const dur = 1.05 + Math.random() * 0.7;
+    const size = 7 + Math.random() * 8;
+
+    el.style.left = `${x}px`;
+    el.style.top = `${-20 - Math.random()*80}px`;
+    el.style.width = `${size}px`;
+    el.style.height = `${size*1.2}px`;
+    el.style.background = colors[(Math.random()*colors.length)|0];
+    el.style.animationDelay = `${delay}s`;
+    el.style.animationDuration = `${dur}s`;
+    el.style.opacity = String(0.75 + Math.random()*0.25);
+    el.style.borderRadius = `${2 + Math.random()*4}px`;
+    layer.appendChild(el);
+
+    setTimeout(() => el.remove(), (delay + dur) * 1000 + 120);
+  }
+}
+
+/* ==========================================================
+   TEAM SELECTS
+   ========================================================== */
+function refreshTeamSelects(){
+  const teamSelect = $("#teamSelect");
+  const stealSelect = $("#stealTeamSelect");
+
+  if(!teamSelect || !stealSelect) return;
+
+  const prev = teamSelect.value;
+  const prevSteal = stealSelect.value;
+
+  teamSelect.innerHTML = state.teams.map((t,i) =>
+    `<option value="${i}">${escapeHtml(t.name)} (Team ${i+1})</option>`
+  ).join("");
+
+  stealSelect.innerHTML = state.teams.map((t,i) =>
+    `<option value="${i}">${escapeHtml(t.name)} (Team ${i+1})</option>`
+  ).join("");
+
+  // Restore selection if possible
+  if(prev !== "" && state.teams[Number(prev)]) teamSelect.value = prev;
+  if(prevSteal !== "" && state.teams[Number(prevSteal)]) stealSelect.value = prevSteal;
+
+  // Highlight selected team in scoreboard (visual help)
+  highlightActiveTeam(Number(teamSelect.value || 0));
+  teamSelect.onchange = () => highlightActiveTeam(Number(teamSelect.value || 0));
+}
+
+function highlightActiveTeam(teamIndex){
+  const cards = $$(".team-card", $("#scoreboardTeams"));
+  cards.forEach((c, i) => c.classList.toggle("team-active", i === teamIndex));
+}
+
+function syncTeamInputsEverywhere(teamIndex){
+  // Keep settings inputs + scoreboard inputs in sync without re-rendering everything
+  const team = state.teams[teamIndex];
+  if(!team) return;
+
+  // Scoreboard name
+  const sbName = $(`[data-sb-name="${teamIndex}"]`);
+  if(sbName && sbName.value !== team.name) sbName.value = team.name;
+
+  // Scoreboard score
+  const sbScore = $(`[data-sb-score="${teamIndex}"]`);
+  if(sbScore && String(sbScore.value) !== String(team.score)) sbScore.value = team.score;
+
+  // Settings panel
+  const stName = $(`[data-team-name="${teamIndex}"]`);
+  if(stName && stName.value !== team.name) stName.value = team.name;
+
+  const stScore = $(`[data-team-score="${teamIndex}"]`);
+  if(stScore && String(stScore.value) !== String(team.score)) stScore.value = team.score;
+
+  refreshTeamSelects();
+}
+
+/* ==========================================================
+   STATUS BOX
+   ========================================================== */
+function showStatus(text, tone="good"){
+  const box = $("#statusBox");
+  box.classList.add("open");
+
+  const prefix = tone === "bad" ? "❌ " : tone === "warn" ? "⏳ " : "✅ ";
+  box.textContent = prefix + text;
+
+  // Subtle border color feedback
+  box.style.borderColor =
+    tone === "bad" ? "rgba(251,113,133,.35)" :
+    tone === "warn" ? "rgba(245,158,11,.35)" :
+    "rgba(50,213,131,.35)";
+}
+
+/* ==========================================================
+   UTILS: escape HTML (for inputs)
+   ========================================================== */
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, (m) => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[m]));
+}
+
+/* ==========================================================
+   EVENT WIRING
+   ========================================================== */
+function bindUI(){
+  // Settings toggles
+  const panel = $("#settingsPanel");
+  $("#btnSettings").onclick = () => panel.classList.toggle("open");
+  $("#btnCollapse").onclick = () => panel.classList.remove("open");
+
+  // Undo / reset / new
+  $("#btnUndo").onclick = undoLast;
+  $("#btnReset").onclick = resetGameKeepTeams;
+  $("#btnNew").onclick = newGameAll;
+
+  // Team buttons
+  $("#btnAddTeam").onclick = addTeam;
+  $("#btnRemoveTeam").onclick = removeTeam;
+  $("#btnApplyStartPoints").onclick = applyStartPoints;
+
+  // Timer settings
+  $("#timerEnabled").onchange = (e) => {
+    state.timerEnabled = !!e.target.checked;
+    saveState();
+    // If a clue is open, update timer box
+    if($("#modalBackdrop").classList.contains("open")) setupTimerForClue();
+  };
+  $("#timerSeconds").oninput = (e) => {
+    state.timerSeconds = clamp(safeInt(e.target.value, 45), 30, 60);
+    saveState();
+  };
+  $("#btnTimerTest").onclick = beep;
+
+  // Modal controls
+  $("#btnCloseModal").onclick = closeClue;
+  $("#modalBackdrop").onclick = (e) => { if(e.target.id === "modalBackdrop") closeClue(); };
+  $("#btnShowAnswer").onclick = revealAnswer;
+
+  // Restart timer
+  $("#btnRestartTimer").onclick = () => {
+    const seconds = clamp(safeInt(state.timerSeconds, 45), 30, 60);
+    startTimer(seconds);
+  };
+
+  // Scoring buttons
+  $("#btnCorrect").onclick = () => {
+    if(!currentClue) return;
+    const teamIndex = Number($("#teamSelect").value);
+    const pts = getOverridePoints();
+    awardCorrect(teamIndex, pts, false);
+  };
+
+  $("#btnPartial").onclick = () => {
+    if(!currentClue) return;
+    const teamIndex = Number($("#teamSelect").value);
+    const pts = getOverridePoints();
+    awardPartial(teamIndex, pts, false);
+  };
+
+  $("#btnIncorrect").onclick = () => {
+    if(!currentClue) return;
+    const teamIndex = Number($("#teamSelect").value);
+    const pts = getOverridePoints();
+    awardIncorrect(teamIndex, pts);
+  };
+
+  // Steal buttons
+  $("#btnStealCorrect").onclick = () => {
+    if(!currentClue) return;
+    const teamIndex = Number($("#stealTeamSelect").value);
+    const pts = getOverridePoints();
+    awardCorrect(teamIndex, pts, true);
+  };
+  $("#btnStealPartial").onclick = () => {
+    if(!currentClue) return;
+    const teamIndex = Number($("#stealTeamSelect").value);
+    const pts = getOverridePoints();
+    awardPartial(teamIndex, pts, true);
+  };
+
+  // Keyboard: ESC closes modal
+  document.addEventListener("keydown", (e) => {
+    if(e.key === "Escape" && $("#modalBackdrop").classList.contains("open")){
+      closeClue();
+    }
+  });
+}
+
+/* ==========================================================
+   INIT
+   ========================================================== */
+function init(){
+  loadState();
+  bindUI();
+
+  // Start with settings open on very first load if no storage exists
+  const firstLoad = !localStorage.getItem(STORAGE_KEY);
+  if(firstLoad) $("#settingsPanel").classList.add("open");
+
+  // Ensure sane state length
+  state.teams = state.teams.slice(0, 6);
+  if(state.teams.length < 2) state.teams = structuredClone(DEFAULT_TEAMS);
+
+  renderAll();
+  updateUndoButton();
+}
+
+init();
 </script>
 </body>
 </html>
