@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conditional Cluedo Jeopardy</title>
+    <style>
+        :root {
+            --primary-blue: #0033cc;
+            --dark-blue: #001a66;
+            --deep-bg: #050510;
+            --text-gold: #ffdb4d;
+            --white: #ffffff;
+            --grey-disabled: #3a3a52;
+            --correct-green: #2ecc71;
+            --wrong-red: #e74c3c;
+            --partial-orange: #f39c12;
+            --font-main: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            --card-radius: 12px;
+            --tile-radius: 16px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
+            color: var(--white);
+            font-family: var(--font-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Prevent body scroll */
+        }
+
+        /* --- Animations --- */
+        @keyframes flashRed {
+            0% { background-color: rgba(231, 76, 60, 0); }
+            25% { background-color: rgba(231, 76, 60, 0.4); }
+            50% { background-color: rgba(231, 76, 60, 0); }
+            75% { background-color: rgba(231, 76, 60, 0.4); }
+            100% { background-color: rgba(231, 76, 60, 0); }
+        }
+
+        @keyframes softPulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.7); }
+            50% { transform: scale(1.02); box-shadow: 0 0 20px 10px rgba(243, 156, 18, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(243, 156, 18, 0); }
+        }
+
+        .anim-wrong { animation: flashRed 0.8s ease-in-out; }
+        .anim-partial { animation: softPulse 0.8s ease-in-out; }
+
+        /* --- UI Container Structure --- */
+        #top-ui-container {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            z-index: 20;
+            flex-shrink: 0;
+        }
+
+        /* --- Header --- */
+        header {
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 { 
+            margin: 0; 
+            color: var(--text-gold); 
+            font-size: 1.4rem; 
+            text-transform: uppercase; 
+            letter-spacing: 2px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .control-group { display: flex; gap: 8px; }
+
+        button {
+            cursor: pointer;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-weight: bold;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button:active { transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+
+        .btn-primary { background: linear-gradient(180deg, var(--text-gold) 0%, #e6b800 100%); color: var(--dark-blue); }
+        .btn-primary:hover { filter: brightness(1.1); }
+        
+        .btn-danger { background: linear-gradient(180deg, #ff6b6b 0%, var(--wrong-red) 100%); color: white; }
+        .btn-secondary { background: linear-gradient(180deg, #8e9eab 0%, #6c757d 100%); color: white; }
+
+        /* --- Settings Panel --- */
+        #settings-panel {
+            background: #2a2a35;
+            padding: 20px;
+            display: none; 
+            border-bottom: 2px solid #444;
+            color: #eee;
+            position: absolute;
+            width: 100%;
+            z-index: 30;
+        }
+        #settings-panel.open { display: block; }
+        
+        .setting-row { margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+        input[type="text"], input[type="number"] {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #555;
+            background: #1a1a25;
+            color: white;
+            font-family: inherit;
+        }
+
+        /* --- Scoreboard --- */
+        #scoreboard {
+            display: flex;
+            justify-content: center;
+            padding: 5px 15px 10px 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .team-card {
+            background: linear-gradient(145deg, #2a2a4a, #1a1a2e);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 12px;
+            border-radius: var(--card-radius);
+            min-width: 110px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .team-card.active-turn { 
+            background: linear-gradient(145deg, #0044cc, #002a80);
+            box-shadow: 0 0 15px rgba(0, 100, 255, 0.5); 
+            border-color: var(--text-gold);
+            transform: translateY(-2px);
+        }
+        
+        .team-name { font-weight: bold; color: var(--text-gold); margin-bottom: 2px; display: block; font-size: 0.95rem; text-shadow: 0 2px 2px rgba(0,0,0,0.5); }
+        .team-score { font-size: 1.4rem; font-weight: bold; display: block; color: white; margin-bottom: 4px; }
+        
+        .score-adjust { 
+            font-size: 0.7rem; 
+            background: rgba(255,255,255,0.1); 
+            border: 1px solid rgba(255,255,255,0.2); 
+            color: #ccc; cursor: pointer; 
+            padding: 3px 6px;
+            border-radius: 4px;
+            margin: 0 2px;
+            box-shadow: none;
+        }
+        .score-adjust:hover { background: rgba(255,255,255,0.2); color: white; }
+
+        /* --- Game Board Area --- */
+        #game-board-container {
+            flex: 1; /* Takes all remaining height */
+            padding: 10px 20px 20px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            overflow: hidden; /* Prevent internal scroll if possible */
+            height: 0; /* Flexbox trick to force calculation */
+        }
+
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: auto repeat(5, 1fr); /* 1 Auto header row, 5 Equal content rows */
+            gap: 12px;
+            width: 100%;
+            max-width: 1400px;
+            height: 100%; /* Fill the container */
+        }
+
+        .cat-header {
+            background: linear-gradient(180deg, #0044cc 0%, #002a80 100%);
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-weight: 800;
+            font-size: clamp(0.7rem, 2vh, 1.1rem); /* Dynamic Font */
+            padding: 5px;
+            border-radius: var(--tile-radius);
+            text-transform: uppercase;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            border-bottom: 4px solid #001a4d;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            letter-spacing: 1px;
+            height: 100%; /* Fill cell */
+        }
+
+        .clue-tile {
+            background: linear-gradient(145deg, #0055ff, #002288);
+            color: var(--text-gold);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(1.5rem, 5vh, 3rem); /* Dynamic Font */
+            font-weight: 900;
+            cursor: pointer;
+            border-radius: var(--tile-radius);
+            transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+            box-shadow: 
+                0 4px 0 #001a66, 
+                0 6px 6px rgba(0,0,0,0.3);
+            height: 100%; /* Fill cell */
+            position: relative;
+        }
+
+        .clue-tile:hover { 
+            transform: translateY(-2px); 
+            filter: brightness(1.1);
+            box-shadow: 
+                0 6px 0 #001a66, 
+                0 10px 15px rgba(0,0,0,0.4);
+        }
+
+        .clue-tile:active {
+            transform: translateY(2px);
+            box-shadow: 
+                0 2px 0 #001a66, 
+                0 3px 3px rgba(0,0,0,0.3);
+        }
+        
+        .clue-tile.disabled {
+            background: #2a2a35;
+            color: transparent;
+            cursor: default;
+            transform: translateY(4px);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+            border: 2px solid #333;
+        }
+
+        /* --- Modal --- */
+        #clue-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        #clue-modal.visible { display: flex; animation: fadeModal 0.3s ease-out; }
+        @keyframes fadeModal { from { opacity: 0; } to { opacity: 1; } }
+
+        .modal-content {
+            background: linear-gradient(135deg, #0033cc 0%, #001a66 100%);
+            border: 2px solid var(--text-gold);
+            width: 100%;
+            max-width: 850px;
+            padding: 40px;
+            text-align: center;
+            border-radius: 30px;
+            box-shadow: 
+                0 0 0 5px rgba(0, 0, 0, 0.2),
+                0 20px 50px rgba(0,0,0,0.7);
+            position: relative;
+            color: white;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header { font-size: 1.1rem; color: #aaccee; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
+        
+        .clue-text {
+            font-size: 2.2rem;
+            margin-bottom: 40px;
+            line-height: 1.3;
+            color: white;
+            font-weight: 600;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .answer-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 25px;
+            margin: 25px 0;
+            border-left: 6px solid var(--text-gold);
+            border-radius: 0 15px 15px 0;
+            display: none;
+            text-align: left;
+        }
+        
+        .answer-box.visible { display: block; animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .answer-detail { margin: 8px 0; font-size: 1.1rem; display: flex; }
+        .answer-label { color: var(--text-gold); font-weight: bold; min-width: 140px; display: inline-block; }
+
+        .modal-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 25px;
+        }
+
+        .score-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.05);
+            padding: 10px 15px;
+            border-radius: 15px;
+        }
+
+        select { 
+            padding: 10px; 
+            font-size: 1rem; 
+            border-radius: 8px; 
+            border: 1px solid #555;
+            background: #111;
+            color: white;
+        }
+        
+        .btn-correct { background: linear-gradient(180deg, #2ecc71 0%, #27ae60 100%); color: white; }
+        .btn-partial { background: linear-gradient(180deg, #f39c12 0%, #d35400 100%); color: white; }
+        .btn-incorrect { background: linear-gradient(180deg, #e74c3c 0%, #c0392b 100%); color: white; }
+        
+        .btn-reveal { 
+            background: linear-gradient(180deg, #ffe066 0%, #ffcc00 100%); 
+            color: #443300; 
+            font-size: 1.2rem; 
+            padding: 12px 30px; 
+            box-shadow: 0 5px 15px rgba(255, 204, 0, 0.3);
+        }
+
+        /* Timer */
+        .timer-display {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--wrong-red);
+            margin-bottom: 10px;
+            visibility: hidden;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .timer-display.active { visibility: visible; }
+
+        /* Canvas for Confetti */
+        #confetti-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* Responsive Tweaks */
+        @media (max-width: 768px) {
+            .clue-text { font-size: 1.4rem; }
+            #game-board { gap: 8px; }
+            .clue-tile { font-size: 1.5rem; border-radius: 12px; }
+            .cat-header { font-size: 0.8rem; padding: 5px; border-radius: 10px; }
+            .team-card { min-width: 80px; padding: 5px; }
+            header { flex-direction: column; gap: 5px; }
+            h1 { font-size: 1.2rem; }
+            .modal-content { padding: 20px; width: 95%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Confetti Canvas -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- Fixed Top Section -->
+    <div id="top-ui-container">
+        <!-- Header -->
+        <header>
+            <h1>Conditional Cluedo</h1>
+            <div class="control-group">
+                <button class="btn-secondary" onclick="game.toggleTimer()" id="timer-btn">Timer: OFF</button>
+                <button class="btn-secondary" onclick="game.undo()">Undo</button>
+                <button class="btn-secondary" onclick="game.toggleSettings()">Settings</button>
+            </div>
+        </header>
+
+        <!-- Settings Panel (Overlays when open) -->
+        <div id="settings-panel">
+            <h3>Game Settings</h3>
+            <div class="setting-row">
+                <label>Number of Teams:</label>
+                <input type="number" id="team-count" min="2" max="6" value="3" style="width: 60px;">
+                <button class="btn-primary" onclick="game.updateTeamCount()">Update</button>
+            </div>
+            <div id="team-names-config" class="setting-row">
+                <!-- Team name inputs injected here -->
+            </div>
+            <div class="setting-row">
+                <button class="btn-danger" onclick="if(confirm('Reset entire game?')) game.init()">Reset Game</button>
+            </div>
+        </div>
+
+        <!-- Scoreboard -->
+        <div id="scoreboard">
+            <!-- Team cards injected here -->
+        </div>
+    </div>
+
+    <!-- Scrollable Game Board Area -->
+    <div id="game-board-container">
+        <div id="game-board">
+            <!-- Grid injected here -->
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="clue-modal">
+        <div class="modal-content">
+            <div class="timer-display" id="modal-timer">60</div>
+            <div class="modal-header" id="modal-title">CATEGORY - $100</div>
+            
+            <div class="clue-text" id="modal-clue">Clue text goes here...</div>
+
+            <button class="btn-reveal" id="btn-reveal" onclick="game.revealAnswer()">Show Answer</button>
+
+            <div class="answer-box" id="modal-answer">
+                <div class="answer-detail"><span class="answer-label">Conditional:</span> <span id="ans-cond"></span></div>
+                <div class="answer-detail"><span class="answer-label">Principle:</span> <span id="ans-princ"></span></div>
+                <div class="answer-detail"><span class="answer-label">Case/Note:</span> <span id="ans-case"></span></div>
+                <div style="margin-top:15px; font-style: italic; color:#ddd;" id="ans-just"></div>
+            </div>
+
+            <div class="modal-controls">
+                <div class="score-controls">
+                    <label>Team:</label>
+                    <select id="team-selector"></select>
+                </div>
+                
+                <div class="score-controls">
+                    <label>Pts:</label>
+                    <input type="number" id="point-override" style="width: 70px;">
+                </div>
+
+                <div class="score-controls">
+                    <button class="btn-correct" onclick="game.handleScore('correct')">✔ Correct</button>
+                    <button class="btn-partial" onclick="game.handleScore('partial')">⚠ Partial</button>
+                    <button class="btn-incorrect" onclick="game.handleScore('incorrect')">✖ Wrong</button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 25px;">
+                <button class="btn-secondary" onclick="game.closeModal()">Close (No Score Change)</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    /**
+     * GAME CONTENT DATA - EDIT THIS SECTION TO CHANGE QUESTIONS
+     */
+    const GAME_DATA = {
+        categories: ["Conditional Type", "Learning Principle", "Case Detective"],
+        clues: [
+            // CATEGORY 1: CONDITIONAL TYPE
+            { id: 0, cat: 0, val: 100, text: "Unless students feel safe, they won’t volunteer.", answer: { type: "Real (First Conditional)", principle: "Belonging", case: "Strict classroom", just: "'Unless' = 'If... not'. Expresses a likely future consequence." }},
+            { id: 1, cat: 0, val: 200, text: "If the class gave students more choice, they would participate more.", answer: { type: "Hypothetical (Now - 2nd)", principle: "Independence", case: "Passive learners", just: "Unreal present situation. Describes a desired change in current routine." }},
+            { id: 2, cat: 0, val: 300, text: "Had the teacher delayed correction, students would have spoken more.", answer: { type: "Hypothetical (Past - 3rd Inversion)", principle: "Mastery", case: "Over-correction", just: "Inversion of 'If the teacher had...'. Refers to a past missed opportunity." }},
+            { id: 3, cat: 0, val: 400, text: "Were the course more practical, learners would stay engaged.", answer: { type: "Hypothetical (Now - Inversion)", principle: "Belonging/Relevance", case: "Practical worker", just: "Formal inversion of 'If the course were...'. Present unreal." }},
+            { id: 4, cat: 0, val: 500, text: "Without clear roles, the project would have failed even faster.", answer: { type: "Hypothetical (Past)", principle: "Independence", case: "Group work breakdown", just: "'Without' phrase replaces the 'If' clause. Implies roles WERE clear." }},
+
+            // CATEGORY 2: LEARNING PRINCIPLE
+            { id: 5, cat: 1, val: 100, text: "Students contribute more as long as their ideas are respected.", answer: { type: "Real", principle: "Belonging", case: "Silent student", just: "Safety and respect are prerequisites for belonging and participation." }},
+            { id: 6, cat: 1, val: 200, text: "Unless learners practice consistently, they won’t reach competence.", answer: { type: "Real", principle: "Mastery", case: "Struggling student", just: "Mastery requires the opportunity to practice and fail safely." }},
+            { id: 7, cat: 1, val: 300, text: "Provided that students manage their own roles, the teacher can step back.", answer: { type: "Real", principle: "Independence", case: "Teacher-centered class", just: "Independence means autonomy and ownership of the process." }},
+            { id: 8, cat: 1, val: 400, text: "Were students to support weaker classmates, the group would improve.", answer: { type: "Hypothetical (Now)", principle: "Generosity", case: "Competitive class", just: "Generosity builds community by contributing to others' success." }},
+            { id: 9, cat: 1, val: 500, text: "Had the group shared responsibility fairly, conflict would have decreased.", answer: { type: "Hypothetical (Past)", principle: "Belonging", case: "Group conflict", just: "Fairness and shared norms are essential for group cohesion (Belonging)." }},
+
+            // CATEGORY 3: CASE DETECTIVE
+            { id: 10, cat: 2, val: 100, text: "Unless the room feels safe, only a few people will speak.", answer: { type: "Real", principle: "Belonging", case: "The Silent Student", just: "The student remains silent because the environment feels threatening." }},
+            { id: 11, cat: 2, val: 200, text: "If assessment rewarded creativity, more students would show strengths.", answer: { type: "Hypothetical (Now)", principle: "Mastery", case: "The Creative Student", just: "This student is failing not due to ability, but because the format ignores their talent." }},
+            { id: 12, cat: 2, val: 300, text: "Had roles been assigned, two people wouldn’t have done all the work.", answer: { type: "Hypothetical (Past)", principle: "Generosity/Independence", case: "Group Work Breakdown", just: "Lack of structure allowed 'hogs' to take over and 'logs' to do nothing." }},
+            { id: 13, cat: 2, val: 400, text: "Were tasks connected to real life, a working student would participate more.", answer: { type: "Hypothetical (Now)", principle: "Independence", case: "The Practical Worker", just: "This adult learner disengages because the content feels abstract or useless." }},
+            { id: 14, cat: 2, val: 500, text: "As long as someone studies alone, they may progress—but the group might not.", answer: { type: "Real", principle: "Generosity", case: "The Independent Learner", just: "High competence alone isn't enough; the class functions best when knowledge is shared." }},
+        ]
+    };
+
+    /**
+     * GAME LOGIC
+     */
+    const game = {
+        teams: [
+            { name: "Alpha", score: 0 },
+            { name: "Beta", score: 0 },
+            { name: "Gamma", score: 0 }
+        ],
+        completedClues: [], 
+        currentClueId: null,
+        historyStack: [],
+        timerEnabled: false,
+        timerInterval: null,
+        timeLeft: 60,
+
+        // --- Initialization ---
+        init: function() {
+            this.completedClues = [];
+            this.teams.forEach(t => t.score = 0);
+            this.historyStack = [];
+            this.renderSettings();
+            this.renderBoard();
+            this.renderScores();
+            this.closeModal();
+            document.getElementById('settings-panel').classList.remove('open');
+        },
+
+        // --- State Management ---
+        pushHistory: function() {
+            const state = {
+                teams: JSON.parse(JSON.stringify(this.teams)),
+                completedClues: [...this.completedClues]
+            };
+            this.historyStack.push(state);
+            if (this.historyStack.length > 10) this.historyStack.shift(); 
+        },
+
+        undo: function() {
+            if (this.historyStack.length === 0) {
+                alert("Nothing to undo!");
+                return;
+            }
+            const state = this.historyStack.pop();
+            this.teams = state.teams;
+            this.completedClues = state.completedClues;
+            this.renderBoard();
+            this.renderScores();
+        },
+
+        // --- UI Rendering ---
+        renderBoard: function() {
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+
+            // Headers
+            GAME_DATA.categories.forEach(cat => {
+                const div = document.createElement('div');
+                div.className = 'cat-header';
+                div.textContent = cat;
+                board.appendChild(div);
+            });
+
+            // Grid
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 3; col++) {
+                    const index = (col * 5) + row; 
+                    const clue = GAME_DATA.clues[index];
+
+                    const tile = document.createElement('div');
+                    tile.className = 'clue-tile';
+                    
+                    if (this.completedClues.includes(clue.id)) {
+                        tile.classList.add('disabled');
+                        tile.textContent = "";
+                    } else {
+                        tile.textContent = `$${clue.val}`;
+                        tile.onclick = () => this.openModal(clue.id);
+                    }
+                    board.appendChild(tile);
+                }
+            }
+        },
+
+        renderScores: function() {
+            const sb = document.getElementById('scoreboard');
+            sb.innerHTML = '';
+            
+            this.teams.forEach((team, index) => {
+                const card = document.createElement('div');
+                card.className = 'team-card';
+                card.innerHTML = `
+                    <span class="team-name" contenteditable="true" onblur="game.updateTeamName(${index}, this.innerText)">${team.name}</span>
+                    <span class="team-score">${team.score}</span>
+                    <div>
+                        <button class="score-adjust" onclick="game.manualAdjust(${index}, 100)">+100</button>
+                        <button class="score-adjust" onclick="game.manualAdjust(${index}, -100)">-100</button>
+                    </div>
+                `;
+                sb.appendChild(card);
+            });
+            
+            const select = document.getElementById('team-selector');
+            const currentVal = select.value;
+            select.innerHTML = '';
+            this.teams.forEach((team, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.textContent = team.name;
+                select.appendChild(opt);
+            });
+            if(currentVal && currentVal < this.teams.length) select.value = currentVal;
+        },
+
+        renderSettings: function() {
+            const container = document.getElementById('team-names-config');
+            container.innerHTML = '';
+            this.teams.forEach((team, index) => {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = team.name;
+                input.onchange = (e) => { this.teams[index].name = e.target.value; this.renderScores(); };
+                container.appendChild(input);
+            });
+            document.getElementById('team-count').value = this.teams.length;
+        },
+
+        updateTeamCount: function() {
+            const count = parseInt(document.getElementById('team-count').value);
+            if (count < 2 || count > 6) return alert("Teams must be between 2 and 6");
+            
+            while (this.teams.length < count) {
+                this.teams.push({ name: `Team ${this.teams.length + 1}`, score: 0 });
+            }
+            while (this.teams.length > count) {
+                this.teams.pop();
+            }
+            this.renderScores();
+            this.renderSettings();
+        },
+
+        updateTeamName: function(index, newName) {
+            this.teams[index].name = newName;
+            this.renderScores();
+        },
+
+        manualAdjust: function(index, amount) {
+            this.pushHistory();
+            this.teams[index].score += amount;
+            this.renderScores();
+        },
+
+        // --- Gameplay ---
+        openModal: function(id) {
+            this.currentClueId = id;
+            const clue = GAME_DATA.clues.find(c => c.id === id);
+            
+            document.getElementById('modal-title').textContent = `${GAME_DATA.categories[clue.cat]} - $${clue.val}`;
+            document.getElementById('modal-clue').textContent = clue.text;
+            document.getElementById('point-override').value = clue.val;
+            
+            document.getElementById('btn-reveal').style.display = 'inline-block';
+            document.getElementById('modal-answer').classList.remove('visible');
+            document.getElementById('ans-cond').textContent = clue.answer.type;
+            document.getElementById('ans-princ').textContent = clue.answer.principle;
+            document.getElementById('ans-case').textContent = clue.answer.case || "N/A";
+            document.getElementById('ans-just').textContent = clue.answer.just;
+
+            document.getElementById('clue-modal').classList.add('visible');
+
+            if (this.timerEnabled) this.startTimer();
+        },
+
+        closeModal: function() {
+            clearInterval(this.timerInterval);
+            document.getElementById('clue-modal').classList.remove('visible');
+            document.body.classList.remove('anim-wrong', 'anim-partial');
+            
+            if (this.currentClueId !== null && !this.completedClues.includes(this.currentClueId)) {
+                 this.completedClues.push(this.currentClueId);
+            }
+            this.renderBoard();
+            this.currentClueId = null;
+        },
+
+        revealAnswer: function() {
+            clearInterval(this.timerInterval);
+            document.getElementById('btn-reveal').style.display = 'none';
+            document.getElementById('modal-answer').classList.add('visible');
+        },
+
+        handleScore: function(type) {
+            const teamIndex = document.getElementById('team-selector').value;
+            const points = parseInt(document.getElementById('point-override').value);
+            
+            if (type === 'incorrect') {
+                document.body.classList.remove('anim-wrong');
+                void document.body.offsetWidth;
+                document.body.classList.add('anim-wrong');
+                return;
+            }
+
+            this.pushHistory();
+            
+            if (type === 'correct') {
+                this.teams[teamIndex].score += points;
+                confetti.explode();
+            } else if (type === 'partial') {
+                this.teams[teamIndex].score += Math.floor(points / 2);
+                document.body.classList.remove('anim-partial');
+                void document.body.offsetWidth;
+                document.body.classList.add('anim-partial');
+            }
+
+            this.renderScores();
+            setTimeout(() => this.closeModal(), 1500);
+        },
+
+        toggleTimer: function() {
+            this.timerEnabled = !this.timerEnabled;
+            document.getElementById('timer-btn').textContent = this.timerEnabled ? "Timer: 30s" : "Timer: OFF";
+            document.getElementById('modal-timer').classList.toggle('active', this.timerEnabled);
+        },
+
+        startTimer: function() {
+            this.timeLeft = 30;
+            const display = document.getElementById('modal-timer');
+            display.textContent = this.timeLeft;
+            clearInterval(this.timerInterval);
+            
+            this.timerInterval = setInterval(() => {
+                this.timeLeft--;
+                display.textContent = this.timeLeft;
+                if (this.timeLeft <= 0) {
+                    clearInterval(this.timerInterval);
+                    display.textContent = "TIME UP";
+                }
+            }, 1000);
+        },
+        
+        toggleSettings: function() {
+            document.getElementById('settings-panel').classList.toggle('open');
+        }
+    };
+
+    /**
+     * CONFETTI UTILITY
+     */
+    const confetti = {
+        canvas: document.getElementById('confetti-canvas'),
+        ctx: document.getElementById('confetti-canvas').getContext('2d'),
+        particles: [],
+        animId: null,
+
+        resize: function() {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+        },
+
+        explode: function() {
+            this.particles = [];
+            const colors = ['#FFCC00', '#ff0000', '#00ff00', '#0000ff', '#ffffff'];
+            
+            for (let i = 0; i < 150; i++) {
+                this.particles.push({
+                    x: window.innerWidth / 2,
+                    y: window.innerHeight / 2,
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: (Math.random() - 0.5) * 20,
+                    size: Math.random() * 8 + 4,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    life: 100
+                });
+            }
+            this.loop();
+        },
+
+        loop: function() {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            let alive = false;
+            
+            this.particles.forEach(p => {
+                if (p.life > 0) {
+                    alive = true;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.5;
+                    p.life -= 1;
+                    p.size *= 0.96;
+
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.fillRect(p.x, p.y, p.size, p.size);
+                }
+            });
+
+            if (alive) {
+                this.animId = requestAnimationFrame(() => this.loop());
+            }
+        }
+    };
+
+    window.addEventListener('resize', () => confetti.resize());
+    confetti.resize();
+    game.init();
+
+</script>
+</body>
+</html>
