@@ -49,8 +49,17 @@
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(243, 156, 18, 0); }
         }
 
+        @keyframes modalShake {
+            0%, 100% { transform: translateX(0); border-color: var(--text-gold); }
+            20% { transform: translateX(-10px); border-color: var(--wrong-red); }
+            40% { transform: translateX(10px); border-color: var(--wrong-red); }
+            60% { transform: translateX(-10px); border-color: var(--wrong-red); }
+            80% { transform: translateX(10px); border-color: var(--wrong-red); }
+        }
+
         .anim-wrong { animation: flashRed 0.8s ease-in-out; }
         .anim-partial { animation: softPulse 0.8s ease-in-out; }
+        .anim-shake { animation: modalShake 0.5s ease-in-out; }
 
         /* --- UI Container Structure --- */
         #top-ui-container {
@@ -268,7 +277,7 @@
 
         .modal-content {
             background: linear-gradient(135deg, #0033cc 0%, #001a66 100%);
-            border: 2px solid var(--text-gold);
+            border: 4px solid var(--text-gold);
             width: 100%;
             max-width: 850px;
             padding: 40px;
@@ -612,6 +621,7 @@
                 opt.textContent = team.name;
                 select.appendChild(opt);
             });
+            // Try to keep selection, but handle wrap-around cases later if needed
             if(currentVal && currentVal < this.teams.length) select.value = currentVal;
         },
 
@@ -670,6 +680,9 @@
             document.getElementById('ans-just').textContent = clue.answer.just;
 
             document.getElementById('clue-modal').classList.add('visible');
+            
+            // Remove any shake classes if present
+            document.querySelector('.modal-content').classList.remove('anim-shake');
 
             if (this.timerEnabled) this.startTimer();
         },
@@ -678,6 +691,7 @@
             clearInterval(this.timerInterval);
             document.getElementById('clue-modal').classList.remove('visible');
             document.body.classList.remove('anim-wrong', 'anim-partial');
+            document.querySelector('.modal-content').classList.remove('anim-shake');
             
             if (this.currentClueId !== null && !this.completedClues.includes(this.currentClueId)) {
                  this.completedClues.push(this.currentClueId);
@@ -698,6 +712,10 @@
             
             this.pushHistory();
             
+            const modalContent = document.querySelector('.modal-content');
+            modalContent.classList.remove('anim-shake');
+            void modalContent.offsetWidth; // Trigger reflow
+
             if (type === 'correct') {
                 this.teams[teamIndex].score += points;
                 confetti.explode();
@@ -711,25 +729,28 @@
                 setTimeout(() => this.closeModal(), 1000);
 
             } else if (type === 'incorrect') {
-                // Deduct points and close (Standard expectation)
                 this.teams[teamIndex].score -= points; 
-                
-                document.body.classList.remove('anim-wrong');
-                void document.body.offsetWidth;
-                document.body.classList.add('anim-wrong');
+                modalContent.classList.add('anim-shake');
                 setTimeout(() => this.closeModal(), 1000);
 
             } else if (type === 'steal') {
-                // Deduct points but KEEP OPEN for next team
+                // Deduct points from current team
                 this.teams[teamIndex].score -= points;
                 
-                document.body.classList.remove('anim-wrong');
-                void document.body.offsetWidth;
-                document.body.classList.add('anim-wrong');
-                // No closeModal() here
+                // Shake modal for feedback
+                modalContent.classList.add('anim-shake');
+                
+                // Switch to next team
+                const nextIndex = (teamIndex + 1) % this.teams.length;
+                this.renderScores(); // Updates scores in background
+                document.getElementById('team-selector').value = nextIndex; // Force switch
+                // Do not close modal
             }
 
-            this.renderScores();
+            // Only render scores if NOT steal (steal does it manually to control selector)
+            if (type !== 'steal') {
+                this.renderScores();
+            }
         },
 
         toggleTimer: function() {
