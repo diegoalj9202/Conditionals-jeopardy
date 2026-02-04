@@ -44,8 +44,8 @@
         }
 
         @keyframes softPulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.7); }
-            50% { transform: scale(1.02); box-shadow: 0 0 20px 10px rgba(243, 156, 18, 0); }
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.7); background-color: rgba(243, 156, 18, 0.2); }
+            50% { transform: scale(1.02); box-shadow: 0 0 20px 10px rgba(243, 156, 18, 0); background-color: rgba(243, 156, 18, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(243, 156, 18, 0); }
         }
 
@@ -457,10 +457,11 @@
                     <input type="number" id="point-override" style="width: 70px;">
                 </div>
 
-                <div class="score-controls">
+                <div class="score-controls" style="flex-wrap:wrap; justify-content:center;">
                     <button class="btn-correct" onclick="game.handleScore('correct')">✔ Correct</button>
                     <button class="btn-partial" onclick="game.handleScore('partial')">⚠ Partial</button>
                     <button class="btn-incorrect" onclick="game.handleScore('incorrect')">✖ Wrong</button>
+                    <button class="btn-secondary" onclick="game.handleScore('steal')" style="font-size:0.8rem; padding: 10px;">Steal ➔</button>
                 </div>
             </div>
             
@@ -692,30 +693,43 @@
         },
 
         handleScore: function(type) {
-            const teamIndex = document.getElementById('team-selector').value;
+            const teamIndex = parseInt(document.getElementById('team-selector').value);
             const points = parseInt(document.getElementById('point-override').value);
             
-            if (type === 'incorrect') {
-                document.body.classList.remove('anim-wrong');
-                void document.body.offsetWidth;
-                document.body.classList.add('anim-wrong');
-                return;
-            }
-
             this.pushHistory();
             
             if (type === 'correct') {
                 this.teams[teamIndex].score += points;
                 confetti.explode();
+                setTimeout(() => this.closeModal(), 1500);
+
             } else if (type === 'partial') {
                 this.teams[teamIndex].score += Math.floor(points / 2);
                 document.body.classList.remove('anim-partial');
                 void document.body.offsetWidth;
                 document.body.classList.add('anim-partial');
+                setTimeout(() => this.closeModal(), 1000);
+
+            } else if (type === 'incorrect') {
+                // Deduct points and close (Standard expectation)
+                this.teams[teamIndex].score -= points; 
+                
+                document.body.classList.remove('anim-wrong');
+                void document.body.offsetWidth;
+                document.body.classList.add('anim-wrong');
+                setTimeout(() => this.closeModal(), 1000);
+
+            } else if (type === 'steal') {
+                // Deduct points but KEEP OPEN for next team
+                this.teams[teamIndex].score -= points;
+                
+                document.body.classList.remove('anim-wrong');
+                void document.body.offsetWidth;
+                document.body.classList.add('anim-wrong');
+                // No closeModal() here
             }
 
             this.renderScores();
-            setTimeout(() => this.closeModal(), 1500);
         },
 
         toggleTimer: function() {
